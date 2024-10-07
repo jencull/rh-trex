@@ -4,7 +4,8 @@ RUN \
     microdnf install -y \
     util-linux \
     && \
-    microdnf clean all
+    microdnf clean all \
+    mkdir /usr/local/bin/rh-trex
 
 COPY \
     rh-trex \
