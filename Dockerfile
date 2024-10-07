@@ -6,13 +6,15 @@ RUN \
     && \
     microdnf clean all
 
+RUN mkdir /usr/local/bin/rh-trex
+
 COPY \
     rh-trex \
     /usr/local/bin/
 
 EXPOSE 8000
 
-ENTRYPOINT ["/usr/local/bin/trex", "serve"]
+ENTRYPOINT ["/usr/local/bin/rh-trex", "serve"]
 
 LABEL name="trex" \
       vendor="Red Hat" \
