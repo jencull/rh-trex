@@ -9,9 +9,10 @@ RUN \
 
 RUN mkdir /usr/local/bin/rh-trex
 
+RUN mkdir /usr/local/bin/rh-trex
 COPY \
-    rh-trex \
-    /usr/local/bin/
+    * \
+    /usr/local/bin/rh-trex
 
 EXPOSE 8000
 
@@ -22,3 +23,4 @@ LABEL name="trex" \
       version="0.0.1" \
       summary="rh-trex API" \
       description="rh-trex API"
+      
