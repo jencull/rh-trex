@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $PODNAME
+  labels:
+    app: rh-trex
+spec:
+  containers:
+    - name:  rh-trex
+      image: $COMPONENT_CONTAINER_IMAGE
+      ports:
+        - containerPort: 8000

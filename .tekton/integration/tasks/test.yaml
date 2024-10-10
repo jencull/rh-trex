@@ -1,0 +1,49 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: deploy-container
+spec:
+  params:
+    - name: serviceaccount-secret
+      description: "Secret to service account that can access the ephemeral namespace"
+    - name: SNAPSHOT
+      description: The JSON string of the Snapshot under test
+    - name: svc-name
+  steps:
+    - name: echo
+      image: registry.redhat.io/openshift4/ose-cli:4.13@sha256:73df37794ffff7de1101016c23dc623e4990810390ebdabcbbfa065214352c7c
+      env:
+        - name: COMPONENT_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['appstudio.openshift.io/component']
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+        - name: SECRETNAME
+          value: $(params.serviceaccount-secret)
+        - name: URL
+          value: $(params.svc-name)
+      script: |
+        #!/bin/bash
+        set -ex
+        set -o pipefail
+       
+        oc get secret $SECRETNAME --template '{{.data.kubeconfig}}' | base64 -d > /kubeconfig
+        export KUBECONFIG=/kubeconfig
+
+        assert_eq() {
+          local expected="$1"
+          local actual="$2"
+          local msg="${3-}"
+        
+          if [ "$expected" == "$actual" ]; then
+            return 0
+          else
+            [ "${#msg}" -gt 0 ] && log_failure "$expected == $actual :: $msg" || true
+            return 1
+          fi
+        }
+
+        # attempt to query pod
+        OUTPUT=$(oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${URL}:8000)
+        assert_eq "$OUTPUT" "<h1>Hello from Flask & Dockerfile</h1>pod \"debug\" deleted " "not equal"

@@ -1,0 +1,87 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: deploy-and-test
+spec:
+  description: |
+    An integration test which provisions an ephemeral namespace and deploys a container from a Konflux snapshot.
+  params:
+    - description: Snapshot of an application
+      name: SNAPSHOT
+      default: '{"components": [{"name":"test-app", "containerImage": "quay.io/example/repo:latest"}]}'
+      type: string
+    - description: Namespace where the container will be deployed.
+      name: NAMESPACE
+      default: default
+      type: string
+    - description: Name of the pod and service to be tested (oc expose gives the service the same name as the pod)
+      name: pod-and-svc-name
+      default: rh-trex
+      type: string
+  tasks:
+    - name: hello-world
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/sonam1412/rh-trex.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: .tekton/integration/tasks/sample-task.yaml
+    - name: provision-namespace
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/build-definitions.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: task/provision-env-with-ephemeral-namespace/0.1/provision-env-with-ephemeral-namespace.yaml
+      params:
+        - name: KONFLUXNAMESPACE
+          value: $(context.pipelineRun.namespace)
+        - name: PIPELINERUN_NAME
+          value: $(context.pipelineRun.name)
+        - name: PIPELINERUN_UID
+          value: $(context.pipelineRun.uid)
+    - name: deploy-container
+      runAfter:
+        - provision-namespace
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/sonam1412/rh-trex.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: .tekton/integration/tasks/deploy.yaml
+      params:
+        - name: serviceaccount-secret
+          value: $(tasks.provision-namespace.results.secretRef)
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+        - name: pod-name
+          value: $(params.pod-and-svc-name)
+    - name: run-tests
+      runAfter:
+        - deploy-container
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/sonam1412/rh-trex.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: .tekton/integration/tasks/test.yaml
+      params:
+        - name: serviceaccount-secret
+          value: $(tasks.provision-namespace.results.secretRef)
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+        - name: svc-name
+          value: $(params.pod-and-svc-name)
