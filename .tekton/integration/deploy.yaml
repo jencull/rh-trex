@@ -7,7 +7,7 @@ metadata:
 spec:
   params:
     - name: serviceaccount-secret
-      description: "Secret to service account that can access the ephemeral namespace"
+      description: "Secret to service account that can access the ephemeral name space"
     - name: SNAPSHOT
       description: The JSON string of the Snapshot under test
     - name: pod-name
