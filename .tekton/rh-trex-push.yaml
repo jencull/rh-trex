@@ -7,13 +7,13 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "main"
-  creationTimestamp: null
+  creationTimestamp: default
   labels:
     appstudio.openshift.io/application: rh-trex
     appstudio.openshift.io/component: rh-trex
     pipelines.appstudio.openshift.io/type: build
   name: rh-trex-on-push
-  namespace: rh-trex-tenant
+  namespace: rh-ee-jcullina-tenant
 spec:
   params:
   - name: dockerfile
