@@ -18,7 +18,7 @@ spec:
       type: string
   tasks:
     - name: integration-test
-      description: Set up DB, run integration tests, and read results
+      # description: Set up DB, run integration tests, and read results
       params:
         - name: SNAPSHOT
           value: $(params.SNAPSHOT)
@@ -35,7 +35,8 @@ spec:
         - name: TEST_OUTPUT
           description: Test output
         steps:
-        - image: registry.redhat.io/openshift4/ose-cli:latest
+        - name: integration-test
+          image: registry.redhat.io/openshift4/ose-cli:latest
           env:
           - name: SNAPSHOT
             value: $(params.SNAPSHOT)
