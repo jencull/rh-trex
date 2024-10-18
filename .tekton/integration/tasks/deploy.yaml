@@ -1,13 +1,11 @@
-
----
-apiVersion: v1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: deploy-container
 spec:
   params:
     - name: serviceaccount-secret
-      description: "Secret to  service account that can access the ephemeral namespace"
+      description: "Secret to service account that can access the ephemeral namespace"
     - name: SNAPSHOT
       description: The JSON string of the Snapshot under test
     - name: pod-name
@@ -36,9 +34,9 @@ spec:
         dnf install -y jq gettext
         export COMPONENT_CONTAINER_IMAGE=$(jq -r --arg component_name "${COMPONENT_NAME}" '.components[] | select(.name == $component_name) | .containerImage' <<< "${SNAPSHOT}")
 
-        echo "Echoing component container image"
+        echo "Echoing component container image: ${COMPONENT_CONTAINER_IMAGE}"
 
-        curl https://raw.githubusercontent.com/sonam1412/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
+        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
         CLUSTER_IP=$(oc expose pod $PODNAME -o jsonpath={.spec.clusterIP}) #expose pod port
         sleep 5 #make sure the pod is running
-        oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000
+#        oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:5432

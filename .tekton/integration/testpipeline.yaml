@@ -1,6 +1,5 @@
----
-apiVersion: tekton.dev/v1
 kind: Pipeline
+apiVersion: tekton.dev/v1beta1
 metadata:
   name: deploy-and-test
 spec:
@@ -25,7 +24,7 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/sonam1412/rh-trex.git
+            value: https://github.com/jencull/rh-trex.git
           - name: revision
             value: main
           - name: pathInRepo
@@ -54,7 +53,7 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/sonam1412/rh-trex.git
+            value: https://github.com/jencull/rh-trex.git
           - name: revision
             value: main
           - name: pathInRepo
@@ -73,7 +72,7 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/sonam1412/rh-trex.git
+            value: https://github.com/jencull/rh-trex.git
           - name: revision
             value: main
           - name: pathInRepo
