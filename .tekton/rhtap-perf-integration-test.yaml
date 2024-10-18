@@ -5,7 +5,7 @@ metadata:
 spec:
   description: >-
     Expects a Snapshot of a simple application with endpoint containing the expected output to be deployed on an environment. 
-    A secret containing the kubeconfig for the environment needs to be mounted via the cluster-credentials workspace binding.
+    A secret containing the  kubeconfig for the environment needs to be mounted via the cluster-credentials workspace binding.
     The route to the single component is expected to have the same name as the component (default appstudio behavior).
   params:
     - description: 'Snapshot of the application'
