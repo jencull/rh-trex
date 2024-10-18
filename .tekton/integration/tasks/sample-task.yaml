@@ -1,8 +1,8 @@
-apiVersion: tekton.dev/v1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: hello
-  namespace: rh-ee-jcullina-tenant
+  namespace: rh-ee-jcullina
 spec:
   steps:
     - name: echo

@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1
+apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: deploy-container
@@ -30,5 +30,19 @@ spec:
        
         oc get secret $SECRETNAME --template '{{.data.kubeconfig}}' | base64 -d > /kubeconfig
         export KUBECONFIG=/kubeconfig
+
+        # Retrieve the service's Cluster IP
+        HOST=$(oc get svc $URL -o jsonpath='{.spec.clusterIP}')
+
+        # Check if HOST was successfully retrieved
+        if [ -z "$HOST" ]; then
+          echo "Failed to retrieve the service IP or hostname."
+          exit 1
+        fi
+
+        # Check the application endpoint
+        ENDPOINT_OUTPUT=$(curl -k http://${HOST}:8000)
+        echo -e "The endpoint outputs the following:\n ${ENDPOINT_OUTPUT}"
+        echo -e "Snapshot output:\n ${SNAPSHOT}"
 
         echo "Hello World!"

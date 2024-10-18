@@ -1,5 +1,3 @@
-
----
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
@@ -7,10 +5,13 @@ metadata:
 spec:
   params:
     - name: serviceaccount-secret
-      description: "Secret to service account that can access the ephemeral name space"
+      description: "Secret to service account that can access the ephemeral namespace"
     - name: SNAPSHOT
       description: The JSON string of the Snapshot under test
     - name: pod-name
+  results:
+    - name: component-container-image
+      description: image url and tag
   steps:
     - name: echo
       image: registry.redhat.io/openshift4/ose-cli:4.13@sha256:73df37794ffff7de1101016c23dc623e4990810390ebdabcbbfa065214352c7c
@@ -35,10 +36,11 @@ spec:
 
         dnf install -y jq gettext
         export COMPONENT_CONTAINER_IMAGE=$(jq -r --arg component_name "${COMPONENT_NAME}" '.components[] | select(.name == $component_name) | .containerImage' <<< "${SNAPSHOT}")
+        echo -n "${COMPONENT_CONTAINER_IMAGE}" > $(results.component-container-image.path)
 
         echo "Echoing component container image"
 
-        curl https://raw.githubusercontent.com/sonam1412/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
+        curl https://raw.githubusercontent.com/jencull/flask-konflux/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
         CLUSTER_IP=$(oc expose pod $PODNAME -o jsonpath={.spec.clusterIP}) #expose pod port
         sleep 5 #make sure the pod is running
         oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000
