@@ -1,5 +1,5 @@
-apiVersion: tekton.dev/v1beta1
 kind: Pipeline
+apiVersion: tekton.dev/v1beta1
 metadata:
   name: integration-test-app
 spec:
