@@ -11,7 +11,7 @@ metadata:
       == "main"
   creationTimestamp: null
   labels:
-    appstudio.openshift.io/application: jen-friday
+    appstudio.openshift.io/application: jen-monday
     appstudio.openshift.io/component: rh-trex
     pipelines.appstudio.openshift.io/type: build
   name: rh-trex-on-pull-request
