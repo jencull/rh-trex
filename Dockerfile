@@ -13,9 +13,10 @@ COPY \
 
 EXPOSE 8000
 
-#ENTRYPOINT ["/usr/local/bin/trex", "serve"]
+
 # Start a simple Python HTTP server on port 8000
 ENTRYPOINT ["python3", "-m", "http.server", "8000"]
+
 
 LABEL name="trex" \
       vendor="Red Hat" \
