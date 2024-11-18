@@ -1,0 +1,36 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: run-test
+spec:
+  params:
+    - name: SERVICEACCOUNT
+      description: "Secret to service account that can access the ephemeral namespace"
+    - name: SNAPSHOT
+      description: The JSON string of the Snapshot under test
+    - name: SERVICENAME
+      description: Service URL of the host
+  steps:
+    - name: rapidast-test
+      image: registry.redhat.io/openshift4/ose-cli:latest
+      env:
+        - name: COMPONENT_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['appstudio.openshift.io/component']
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+        - name: SECRETNAME
+          value: $(params.serviceaccount-secret)
+        - name: HOSTURL
+          value: $(params.SERVICENAME)
+      script: |
+        #!/bin/bash
+        set -ex
+        set -o pipefail
+       
+        oc get secret $SECRETNAME --template '{{.data.kubeconfig}}' | base64 -d > /kubeconfig
+        export KUBECONFIG=/kubeconfig
+
+        echo "Hello World!"
+        echo "Host URL: ${HOSTURL}"

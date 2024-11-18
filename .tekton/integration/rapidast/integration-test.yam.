@@ -1,0 +1,85 @@
+---
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: rapidast-test
+spec:
+  params:
+    - name: repo_url
+      default: github.com/RedHatProductSecurity/rapidast
+    - name: revision
+      default: "development"
+    - description: 'Snapshot of the application'
+      name: SNAPSHOT
+      default: |-
+          '{
+            "components": [
+              {
+                "name":"rapidast",
+                "containerImage": "quay.io/redhatproductsecurity/rapidast:latest",
+                "source":{
+                  "git":{
+                    "url":"git@github.com:RedHatProductSecurity/rapidast.git",
+                    "revision":"development",
+                  }
+                }
+              }
+            ]
+          }'
+      type: string
+    - description: Name of the pod and service to be tested (oc expose gives the service the same name as the pod)
+      name: pod-and-svc-name
+      default: trex
+      type: string
+  tasks:
+    - name: parse-metadata
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/integration-examples
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: tasks/test_metadata.yaml
+      params:
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+    - name: provision-namespace
+      runAfter:
+        - parse-metadata
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/build-definitions.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: task/provision-env-with-ephemeral-namespace/0.1/provision-env-with-ephemeral-namespace.yaml
+      params:
+        - name: KONFLUXNAMESPACE
+          value: $(context.pipelineRun.namespace)
+        - name: PIPELINERUN_NAME
+          value: $(context.pipelineRun.name)
+        - name: PIPELINERUN_UID
+          value: $(context.pipelineRun.uid)
+    - name: deploy-container
+      runAfter:
+        - provision-namespace
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/sonam1412/rh-trex.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: .tekton/integration/tasks/deploy.yaml
+      params:
+        - name: SERVICEACCOUNT
+          value: $(tasks.provision-namespace.results.secretRef)
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+        - name: PODNAME
+          value: $(params.pod-and-svc-name)
