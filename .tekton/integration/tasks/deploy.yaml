@@ -45,5 +45,4 @@ spec:
         echo "Service is running at ${CLUSTER_IP}"
         # Wait for the pod to be in the Running state before proceeding
         oc wait --for=condition=Ready pod/$PODNAME --timeout=60s
-
-#        oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000
+        oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000
