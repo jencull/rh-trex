@@ -44,5 +44,9 @@ spec:
         fi
         echo "Service is running at ${CLUSTER_IP}"
         # Wait for the pod to be in the Running state before proceeding
-        oc wait --for=condition=Ready pod/$PODNAME --timeout=60s
+        oc get pod trex -o wide
+        oc describe pod trex
+        oc logs pod/trex
+
+        oc wait --for=condition=Ready pod/$PODNAME --timeout=180s
         oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000

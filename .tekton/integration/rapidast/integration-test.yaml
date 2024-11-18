@@ -77,9 +77,9 @@ spec:
           - name: pathInRepo
             value: .tekton/integration/tasks/deploy.yaml
       params:
-        - name: SERVICEACCOUNT
+        - name: serviceaccount-secret
           value: $(tasks.provision-namespace.results.secretRef)
         - name: SNAPSHOT
           value: $(params.SNAPSHOT)
-        - name: PODNAME
+        - name: pod-name
           value: $(params.pod-and-svc-name)
