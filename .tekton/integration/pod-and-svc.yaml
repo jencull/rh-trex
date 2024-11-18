@@ -3,11 +3,10 @@ kind: Pod
 metadata:
   name: $PODNAME
   labels:
-    app: rh-trex
+    app: trex
 spec:
   containers:
-    - name:  rh-trex
+    - name: trex
       image: $COMPONENT_CONTAINER_IMAGE
       ports:
         - containerPort: 8000
-          hostPort: 8000

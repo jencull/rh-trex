@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: test-deployed-container
+  name: deploy-container
 spec:
   params:
     - name: serviceaccount-secret
@@ -31,18 +31,17 @@ spec:
         oc get secret $SECRETNAME --template '{{.data.kubeconfig}}' | base64 -d > /kubeconfig
         export KUBECONFIG=/kubeconfig
 
-        # Retrieve the service's Cluster IP
-        HOST=$(oc get svc $URL -o jsonpath='{.spec.clusterIP}')
+        echo "Hello World!"
 
-        # Check if HOST was successfully retrieved
-        if [ -z "$HOST" ]; then
-          echo "Failed to retrieve the service IP or hostname."
-          exit 1
-        fi
-
+        oc get --kubeconfig /kubeconfig all
+        oc get --kubeconfig /kubeconfig routes
+        ROUTE_NAME=$(oc get --kubeconfig /kubeconfig routes trex -o name --insecure-skip-tls-verify)
+        HOST=$(oc get --kubeconfig /kubeconfig "${ROUTE_NAME}" -o jsonpath={.spec.host}  --insecure-skip-tls-verify)
+        echo "Found target host ${HOST} for app ${APPLICATION_NAME}"
+            
         # Check the application endpoint
-        ENDPOINT_OUTPUT=$(curl -k http://${HOST}:8000)
+        ENDPOINT_OUTPUT=$(curl -k http://${HOST}:${PORT})
         echo -e "The endpoint outputs the following:\n ${ENDPOINT_OUTPUT}"
         echo -e "Snapshot output:\n ${SNAPSHOT}"
 
-        echo "Hello World!"
+        echo "Got the HOST URL"
