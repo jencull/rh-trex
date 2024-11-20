@@ -38,7 +38,7 @@ spec:
 
         echo "Echoing component container image"
 
-        curl https://raw.githubusercontent.com/sonam1412/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
+        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
         CLUSTER_IP=$(oc expose pod $PODNAME -o jsonpath={.spec.clusterIP}) #expose pod port
         sleep 5 #make sure the pod is running
         oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000

@@ -67,7 +67,7 @@ spec:
           value: $(params.SNAPSHOT)
         - name: pod-name
           value: $(params.pod-and-svc-name)
-    - name: test-deployed-container
+    - name: run-test
       runAfter:
         - hello-world
       taskRef:
