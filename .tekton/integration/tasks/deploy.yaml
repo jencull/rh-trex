@@ -9,9 +9,11 @@ spec:
     - name: SNAPSHOT
       description: The JSON string of the Snapshot under test
     - name: pod-name
+      description: Name of the pod and service to be tested
   steps:
-    - name: echo
-      image: registry.redhat.io/openshift4/ose-cli:4.13@sha256:73df37794ffff7de1101016c23dc623e4990810390ebdabcbbfa065214352c7c
+    - name: deploy-container
+      image: registry.redhat.io/openshift4/ose-cli:latest
+      imagePullPolicy: Always
       env:
         - name: COMPONENT_NAME
           valueFrom:
@@ -34,19 +36,9 @@ spec:
         dnf install -y jq gettext
         export COMPONENT_CONTAINER_IMAGE=$(jq -r --arg component_name "${COMPONENT_NAME}" '.components[] | select(.name == $component_name) | .containerImage' <<< "${SNAPSHOT}")
 
-        echo "Echoing component container image: ${COMPONENT_CONTAINER_IMAGE}"
+        echo "Echoing component container image"
 
-        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
-        CLUSTER_IP=$(oc get svc $PODNAME -o jsonpath={.spec.clusterIP}) #expose pod port
-        if [ -z "$CLUSTER_IP" ]; then
-          echo "Failed to retrieve the service's Cluster IP."
-          exit 1
-        fi
-        echo "Service is running at ${CLUSTER_IP}"
-        # Wait for the pod to be in the Running state before proceeding
-        oc get pod trex -o wide
-        oc describe pod trex
-        oc logs pod/trex
-
-        oc wait --for=condition=Ready pod/$PODNAME --timeout=180s
+        curl https://raw.githubusercontent.com/sonam1412/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
+        CLUSTER_IP=$(oc expose pod $PODNAME -o jsonpath={.spec.clusterIP}) #expose pod port
+        sleep 5 #make sure the pod is running
         oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000

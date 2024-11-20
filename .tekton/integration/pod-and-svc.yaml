@@ -10,9 +10,6 @@ spec:
       image: $COMPONENT_CONTAINER_IMAGE
       ports:
         - containerPort: 8000
-      command: ["/bin/sh"]
-      args: ["-c", "sleep 3600"]
-  
 
 ---
 

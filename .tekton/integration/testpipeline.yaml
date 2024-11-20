@@ -16,7 +16,7 @@ spec:
       type: string
     - description: Name of the pod and service to be tested (oc expose gives the service the same name as the pod)
       name: pod-and-svc-name
-      default: rh-trex
+      default: trex
       type: string
   tasks:
     - name: hello-world
