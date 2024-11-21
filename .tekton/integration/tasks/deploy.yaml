@@ -45,7 +45,7 @@ spec:
 
         # Create a ClusterIP service for the pod
         echo "Creating a ClusterIP service for the pod..."
-        oc create service clusterip $PODNAME --tcp=8000:8000
+        oc create service clusterip $PODNAME --tcp=8080:8080
 
         echo "Debugging service connectivity..."
         oc describe pod/trex
@@ -58,7 +58,7 @@ spec:
 
         # Get the ClusterIP and create the URL
         CLUSTER_IP=$(oc get svc $PODNAME -o jsonpath='{.spec.clusterIP}')
-        export HOST_URL=https://$CLUSTER_IP:8000
+        export HOST_URL=http://$CLUSTER_IP:8080
         echo "Host URL: ${HOST_URL}"
 
         # Debugging information
