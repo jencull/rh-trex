@@ -43,6 +43,9 @@ spec:
         echo "Waiting for the pod to be ready..."
         oc wait --for=condition=Ready pod/$PODNAME --timeout=120s
 
+        echo "Creating a service for the pod..."
+        oc create service clusterip $PODNAME --tcp=8000:8000
+
         # Expose the service via a Route
         echo "Exposing the service as a Route..."
         oc expose svc $PODNAME
