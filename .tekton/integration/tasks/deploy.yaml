@@ -39,17 +39,25 @@ spec:
         echo "Echoing component container image"
 
         curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
-        CLUSTER_IP=$(oc expose pod $PODNAME -o jsonpath={.spec.clusterIP}) #expose pod port
-        sleep 5 #make sure the pod is running
-        oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000
+        
+        echo "Waiting for the pod to be ready..."
+        oc wait --for=condition=Ready pod/$PODNAME --timeout=120s
 
+        # Expose the service via a Route
+        echo "Exposing the service as a Route..."
+        oc expose svc $PODNAME
+
+        # Retrieve the Route URL
+        ROUTE_URL=$(oc get route $PODNAME -o jsonpath='{.spec.host}')
+        export HOST_URL=http://${ROUTE_URL}
+        echo "Host URL: ${HOST_URL}"
+
+        # Optional debugging steps
+        echo "Gathering debugging information..."
         oc get --kubeconfig /kubeconfig events
         oc describe --kubeconfig /kubeconfig pod -l app=trex
         oc logs --kubeconfig /kubeconfig -l app=trex
 
-        export HOST_URL=http://${CLUSTER_IP}:8000
-        echo "Host URL: ${HOST_URL}"
-
-        #oc debug node/$PODNAME -- curl ${PODNAME}:8000
-
-        curl -v "${HOST_URL}"
+        # Test the Route URL
+        echo "Testing the Route URL..."
+        curl -v "${HOST_URL}"        
