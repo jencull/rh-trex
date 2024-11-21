@@ -52,7 +52,7 @@ spec:
         oc describe svc trex
         oc get endpoints trex
         oc logs pod/trex
-        oc exec pod/trex -- netstat -tuln
+        oc exec pod/trex -- ss -tuln || echo "ss command failed"
 
         # Get the ClusterIP and create the URL
         CLUSTER_IP=$(oc get svc $PODNAME -o jsonpath='{.spec.clusterIP}')
