@@ -29,48 +29,56 @@ spec:
         #!/bin/bash
         set -ex
         set -o pipefail
-       
+
+        # get and set kubeconfig
         oc get secret $SECRETNAME --template '{{.data.kubeconfig}}' | base64 -d > /kubeconfig
         export KUBECONFIG=/kubeconfig
 
         dnf install -y jq gettext
+
         export COMPONENT_CONTAINER_IMAGE=$(jq -r --arg component_name "${COMPONENT_NAME}" '.components[] | select(.name == $component_name) | .containerImage' <<< "${SNAPSHOT}")
+        echo "Component container image: ${COMPONENT_CONTAINER_IMAGE}"
 
-        echo "Echoing component container image"
+        echo "Deploying pod and service..."
+        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f -
 
-        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
-        
         echo "Waiting for the pod to be ready..."
         oc wait --for=condition=Ready pod/$PODNAME --timeout=120s
 
-        # Create a ClusterIP service for the pod
+        # Quick connectivity test using curl from a debug pod
+        echo "Testing connectivity to the pod using curl (DNS resolution)..."
+        if ! oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000; then
+          echo "Initial connectivity test to ${PODNAME}:8000 failed. Proceeding with debugging steps..."
+        fi
+
         echo "Creating a ClusterIP service for the pod..."
-        oc create service clusterip $PODNAME --tcp=8080:8080
+        oc create service clusterip $PODNAME --tcp=8000:8000
 
-        echo "Debugging service connectivity..."
-        oc describe pod/trex
-        oc describe svc trex
-        oc get endpoints trex
-        oc logs pod/trex
-        oc exec pod/trex -- ss -tuln || echo "ss command failed"
+        # Debugging pod and service
+        echo "Debugging pod and service configuration..."
+        oc describe pod/$PODNAME
+        oc describe svc/$PODNAME
+        oc get endpoints/$PODNAME
+        oc logs pod/$PODNAME
+        oc exec pod/$PODNAME -- ss -tuln || echo "ss command failed"
 
-
-
-        # Get the ClusterIP and create the URL
+        # Retrieve ClusterIP and construct the service URL
         CLUSTER_IP=$(oc get svc $PODNAME -o jsonpath='{.spec.clusterIP}')
-        export HOST_URL=http://$CLUSTER_IP:8080
+        export HOST_URL=http://$CLUSTER_IP:8000
         echo "Host URL: ${HOST_URL}"
 
-        # Debugging information
+        # Debugging information collection
         echo "Gathering debugging information..."
         oc get --kubeconfig /kubeconfig events
         oc describe --kubeconfig /kubeconfig pod -l app=trex
         oc logs --kubeconfig /kubeconfig -l app=trex
 
-        # Test the ClusterIP URL
+        # Test connectivity to the ClusterIP URL
         echo "Testing service connectivity using ClusterIP..."
-        curl -v $HOST_URL
+        if ! curl -v $HOST_URL; then
+          echo "Failed to connect to ${HOST_URL}. Debugging required."
+        fi
 
-        # Use HOST_URL in the next step (e.g., for RapiDAST)
+        # Run any additional DAST scans or tests
         echo "Running DAST scan against: ${HOST_URL}"
-        curl -v "${HOST_URL}"       
+        curl -v "${HOST_URL}"      
