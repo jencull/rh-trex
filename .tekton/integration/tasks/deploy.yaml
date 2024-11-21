@@ -43,24 +43,20 @@ spec:
         echo "Waiting for the pod to be ready..."
         oc wait --for=condition=Ready pod/$PODNAME --timeout=120s
 
-        echo "Creating a service for the pod..."
+        # Create a ClusterIP service for the pod
+        echo "Creating a ClusterIP service for the pod..."
         oc create service clusterip $PODNAME --tcp=8000:8000
 
-        # Expose the service via a Route
-        echo "Exposing the service as a Route..."
-        oc expose svc $PODNAME
-
-        # Retrieve the Route URL
-        ROUTE_URL=$(oc get route $PODNAME -o jsonpath='{.spec.host}')
-        export HOST_URL=http://${ROUTE_URL}
+        # Use the internal service DNS name as the target
+        export HOST_URL=http://$PODNAME.$(oc project -q).svc.cluster.local:8000
         echo "Host URL: ${HOST_URL}"
 
-        # Optional debugging steps
+        # Debugging information
         echo "Gathering debugging information..."
         oc get --kubeconfig /kubeconfig events
         oc describe --kubeconfig /kubeconfig pod -l app=trex
         oc logs --kubeconfig /kubeconfig -l app=trex
 
-        # Test the Route URL
-        echo "Testing the Route URL..."
-        curl -v "${HOST_URL}"        
+        # Use HOST_URL in the next step (e.g., for RapiDAST)
+        echo "Running DAST scan against: ${HOST_URL}"
+        curl -v "${HOST_URL}"      
