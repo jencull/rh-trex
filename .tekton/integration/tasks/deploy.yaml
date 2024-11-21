@@ -47,8 +47,9 @@ spec:
         echo "Creating a ClusterIP service for the pod..."
         oc create service clusterip $PODNAME --tcp=8000:8000
 
-        # Use the internal service DNS name as the target
-        export HOST_URL=http://$PODNAME.$(oc project -q).svc.cluster.local:8000
+        # Retrieve the ClusterIP and form the URL
+        CLUSTER_IP=$(oc get svc $PODNAME -o jsonpath='{.spec.clusterIP}')
+        export HOST_URL=http://$CLUSTER_IP:8000
         echo "Host URL: ${HOST_URL}"
 
         # Debugging information
@@ -57,6 +58,10 @@ spec:
         oc describe --kubeconfig /kubeconfig pod -l app=trex
         oc logs --kubeconfig /kubeconfig -l app=trex
 
+        # Test the ClusterIP URL
+        echo "Testing service connectivity using ClusterIP..."
+        curl -v $HOST_URL
+
         # Use HOST_URL in the next step (e.g., for RapiDAST)
         echo "Running DAST scan against: ${HOST_URL}"
-        curl -v "${HOST_URL}"      
+        curl -v "${HOST_URL}"       
