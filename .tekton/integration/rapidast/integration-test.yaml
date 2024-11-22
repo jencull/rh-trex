@@ -83,3 +83,15 @@ spec:
           value: $(params.SNAPSHOT)
         - name: pod-name
           value: $(params.pod-and-svc-name)
+    - name: rapidast-test
+      runAfter:
+        - deploy-container
+      taskRef:
+        name: run-test
+      params:
+        - name: SERVICEACCOUNT
+          value: $(tasks.provision-namespace.results.secretRef)
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+        - name: SERVICENAME
+          value: $(params.pod-and-svc-name)

@@ -45,40 +45,29 @@ spec:
         echo "Waiting for the pod to be ready..."
         oc wait --for=condition=Ready pod/$PODNAME --timeout=120s
 
-        # Quick connectivity test using curl from a debug pod
-        echo "Testing connectivity to the pod using curl (DNS resolution)..."
-        if ! oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000; then
-          echo "Initial connectivity test to ${PODNAME}:8000 failed. Proceeding with debugging steps..."
-        fi
-
-        echo "Creating a ClusterIP service for the pod..."
-        oc create service clusterip $PODNAME --tcp=8000:8000
-
-        # Debugging pod and service
-        echo "Debugging pod and service configuration..."
-        oc describe pod/$PODNAME
-        oc describe svc/$PODNAME
-        oc get endpoints/$PODNAME
-        oc logs pod/$PODNAME
-        oc exec pod/$PODNAME -- ss -tuln || echo "ss command failed"
-
-        # Retrieve ClusterIP and construct the service URL
-        CLUSTER_IP=$(oc get svc $PODNAME -o jsonpath='{.spec.clusterIP}')
-        export HOST_URL=http://$CLUSTER_IP:8000
+        # Create the Host URL using Pod DNS and port
+        export HOST_URL=http://${PODNAME}:8000
         echo "Host URL: ${HOST_URL}"
 
-        # Debugging information collection
-        echo "Gathering debugging information..."
-        oc get --kubeconfig /kubeconfig events
-        oc describe --kubeconfig /kubeconfig pod -l app=trex
-        oc logs --kubeconfig /kubeconfig -l app=trex
-
-        # Test connectivity to the ClusterIP URL
-        echo "Testing service connectivity using ClusterIP..."
-        if ! curl -v $HOST_URL; then
+        # Quick connectivity test using curl
+        echo "Testing connectivity to the pod using curl (Pod DNS)..."
+        if ! curl -v ${HOST_URL}; then
           echo "Failed to connect to ${HOST_URL}. Debugging required."
         fi
 
+        # Debugging pod and service configuration
+        echo "Debugging pod configuration..."
+        oc describe pod/$PODNAME
+        oc logs pod/$PODNAME
+        oc exec pod/$PODNAME -- ss -tuln || echo "ss command failed"
+
+        # Additional debugging information
+        echo "Gathering additional debugging information..."
+        oc get --kubeconfig /kubeconfig events
+        oc describe --kubeconfig /kubeconfig pod/$PODNAME
+        oc logs --kubeconfig /kubeconfig pod/$PODNAME
+
         # Run any additional DAST scans or tests
         echo "Running DAST scan against: ${HOST_URL}"
-        curl -v "${HOST_URL}"      
+        curl -v "${HOST_URL}"
+     
