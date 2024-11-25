@@ -46,7 +46,7 @@ spec:
         oc wait --for=condition=Ready pod/$PODNAME --timeout=120s
 
         # Create the Host URL using Pod DNS and port
-        export HOST_URL=http://${PODNAME}:8000
+        export HOST_URL=${PODNAME}:8000
         echo "Host URL: ${HOST_URL}"
 
         # Quick connectivity test using curl

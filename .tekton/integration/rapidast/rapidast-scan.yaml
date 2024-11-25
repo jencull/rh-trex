@@ -34,7 +34,7 @@ spec:
           configVersion: 5
         application:
           shortName: "my-application"
-          url: "http://$(params.SERVICENAME):8000"
+          url: ":8000"
         scanners:
           zap:
             apiScan:
