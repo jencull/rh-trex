@@ -2,7 +2,7 @@
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
-  name: rapidast-test
+  name: rapidast-scan
 spec:
   params:
     - name: repo_url
@@ -83,11 +83,11 @@ spec:
           value: $(params.SNAPSHOT)
         - name: pod-name
           value: $(params.pod-and-svc-name)
-    - name: rapidast-test
+    - name: rapidast-scan
       runAfter:
         - deploy-container
       taskRef:
-        name: run-test
+        name: run-scan
       params:
         - name: SERVICEACCOUNT
           value: $(tasks.provision-namespace.results.secretRef)
