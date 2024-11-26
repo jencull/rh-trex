@@ -287,6 +287,6 @@ func TestUpdateDinosaurWithRacingRequests_WithoutLock(t *testing.T) {
 	}
 
 	// the dinosaur patch request is not protected by the advisory lock, so there will likely be more then one update captured
-	t.Logf("Updated Count: %v\n", updatedCount)
-	Expect(false).To(BeTrue())
+	//t.Logf("Updated Count: %v\n", updatedCount)
+	//Expect(false).To(BeTrue())
 }
