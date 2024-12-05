@@ -19,18 +19,6 @@ spec:
       default: trex
       type: string
   tasks:
-    - name: hello-world
-      runAfter: 
-        - deploy-container
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/jencull/rh-trex.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: .tekton/integration/tasks/sample-task.yaml
     - name: provision-namespace
       taskRef:
         resolver: git
@@ -67,9 +55,42 @@ spec:
           value: $(params.SNAPSHOT)
         - name: pod-name
           value: $(params.pod-and-svc-name)
-    - name: run-test
+    - name: hello-world
+      runAfter: 
+        - deploy-container
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/jencull/rh-trex.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: .tekton/integration/tasks/sample-task.yaml
+    - name: port-forward
       runAfter:
         - hello-world
+      taskSpec:
+        steps:
+          - name: port-forward
+            image: registry.redhat.io/openshift4/ose-cli:latest
+            script: |
+              #!/usr/bin/env bash
+              echo "${KUBECONFIG_VALUE}" > /tmp/kubeconfig
+              export KUBECONFIG=/tmp/kubeconfig
+              oc port-forward svc/$(params.pod-and-svc-name) 8080:8000 &
+              # Wait briefly to ensure the port-forward is established
+              sleep 10
+        params:
+          - name: KUBECONFIG_VALUE
+            description: Kubeconfig file for accessing the cluster
+            type: string
+          - name: pod-and-svc-name
+            description: Name of the pod and service
+            default: trex
+    - name: run-test
+      runAfter:
+        - port-forward
       taskRef:
         resolver: git
         params:
