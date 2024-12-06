@@ -6,16 +6,13 @@ RUN \
     && \
     microdnf clean all
 
-RUN mkdir /usr/local/bin/trex
 COPY \
-    * \
-    /usr/local/bin/trex
+    trex \
+    /usr/local/bin/
 
 EXPOSE 8000
 
-#ENTRYPOINT ["/usr/local/bin/trex", "serve"]
-#ENTRYPOINT ["/bin/ls"]
-ENTRYPOINT ["python3", "-m", "http.server", "8000"]
+ENTRYPOINT ["/usr/local/bin/trex", "serve"]
 
 LABEL name="trex" \
       vendor="Red Hat" \
