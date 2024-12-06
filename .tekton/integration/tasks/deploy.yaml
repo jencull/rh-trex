@@ -30,44 +30,41 @@ spec:
         set -ex
         set -o pipefail
 
-        # get and set kubeconfig
+        echo "Using secretRef in deploy-container: $SECRETNAME"
+
+        # Export the kubeconfig using the secret
         oc get secret $SECRETNAME --template '{{.data.kubeconfig}}' | base64 -d > /kubeconfig
         export KUBECONFIG=/kubeconfig
 
-        dnf install -y jq gettext
+        # Install dependencies
+        dnf install -y jq gettext 
 
+        # Extract container image from snapshot
         export COMPONENT_CONTAINER_IMAGE=$(jq -r --arg component_name "${COMPONENT_NAME}" '.components[] | select(.name == $component_name) | .containerImage' <<< "${SNAPSHOT}")
-        echo "Component container image: ${COMPONENT_CONTAINER_IMAGE}"
 
-        echo "Deploying pod and service..."
-        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f -
+        # Fetch, resolve, and log the pod-and-svc.yaml content
+        echo "Fetching and resolving pod-and-svc.yaml..."
+        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst > resolved-pod-and-svc.yaml
 
-        echo "Waiting for the pod to be ready..."
-        oc wait --for=condition=Ready pod/$PODNAME --timeout=120s
+        echo "Resolved pod-and-svc.yaml content:"
+        cat resolved-pod-and-svc.yaml
 
-        # Create the Host URL using Pod DNS and port
-        export HOST_URL=${PODNAME}:8000
-        echo "Host URL: ${HOST_URL}"
+        # Apply the pod and service YAML
+        oc apply -f resolved-pod-and-svc.yaml
 
-        # Quick connectivity test using curl
-        echo "Testing connectivity to the pod using curl (Pod DNS)..."
-        if ! curl -v ${HOST_URL}; then
-          echo "Failed to connect to ${HOST_URL}. Debugging required."
-        fi
 
-        # Debugging pod and service configuration
-        echo "Debugging pod configuration..."
-        oc describe pod/$PODNAME
-        oc logs pod/$PODNAME
-        oc exec pod/$PODNAME -- ss -tuln || echo "ss command failed"
+        # Wait for the pod to be ready using `oc wait`
+        echo "Waiting for pod $PODNAME to be ready..."
+        oc wait --for=condition=Ready pod/$PODNAME --timeout=240s
 
-        # Additional debugging information
-        echo "Gathering additional debugging information..."
-        oc get --kubeconfig /kubeconfig events
-        oc describe --kubeconfig /kubeconfig pod/$PODNAME
-        oc logs --kubeconfig /kubeconfig pod/$PODNAME
+        # Port forward from local port 8000 to pod port 8080
+        echo "Starting port forward..."
+        oc port-forward --kubeconfig /kubeconfig pod/$PODNAME 8080:8000 &
 
-        # Run any additional DAST scans or tests
-        echo "Running DAST scan against: ${HOST_URL}"
-        curl -v "${HOST_URL}"
-     
+        # Wait briefly to establish the port-forward
+        sleep 20
+
+        # Test the application using localhost:8080
+        echo "Testing application at http://localhost:8000"
+        curl -X GET -s http://localhost:8080 | jq
+    

@@ -33,15 +33,15 @@ spec:
 
         echo "Hello World!"
 
-        oc get --kubeconfig /kubeconfig all
-        oc get --kubeconfig /kubeconfig routes
-        ROUTE_NAME=$(oc get --kubeconfig /kubeconfig routes trex -o name --insecure-skip-tls-verify)
-        HOST=$(oc get --kubeconfig /kubeconfig "${ROUTE_NAME}" -o jsonpath={.spec.host}  --insecure-skip-tls-verify)
-        echo "Found target host ${HOST} for app ${APPLICATION_NAME}"
+        # oc get --kubeconfig /kubeconfig all
+        # oc get --kubeconfig /kubeconfig routes
+        # ROUTE_NAME=$(oc get --kubeconfig /kubeconfig routes trex -o name --insecure-skip-tls-verify)
+        # HOST=$(oc get --kubeconfig /kubeconfig "${ROUTE_NAME}" -o jsonpath={.spec.host}  --insecure-skip-tls-verify)
+        # echo "Found target host ${HOST} for app ${APPLICATION_NAME}"
             
-        # Check the application endpoint
-        ENDPOINT_OUTPUT=$(curl -k http://${HOST}:${PORT})
-        echo -e "The endpoint outputs the following:\n ${ENDPOINT_OUTPUT}"
-        echo -e "Snapshot output:\n ${SNAPSHOT}"
+        # # Check the application endpoint
+        # ENDPOINT_OUTPUT=$(curl -k http://${HOST}:${PORT})
+        # echo -e "The endpoint outputs the following:\n ${ENDPOINT_OUTPUT}"
+        # echo -e "Snapshot output:\n ${SNAPSHOT}"
 
-        echo "Got the HOST URL"
+        # echo "Got the HOST URL"

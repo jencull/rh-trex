@@ -1,5 +1,5 @@
-kind: Pipeline
 apiVersion: tekton.dev/v1beta1
+kind: Pipeline
 metadata:
   name: deploy-and-test
 spec:
@@ -36,6 +36,7 @@ spec:
           value: $(context.pipelineRun.name)
         - name: PIPELINERUN_UID
           value: $(context.pipelineRun.uid)
+    
     - name: deploy-container
       runAfter:
         - provision-namespace
@@ -56,7 +57,7 @@ spec:
         - name: pod-name
           value: $(params.pod-and-svc-name)
     - name: hello-world
-      runAfter: 
+      runAfter:
         - deploy-container
       taskRef:
         resolver: git
@@ -78,7 +79,7 @@ spec:
               #!/usr/bin/env bash
               echo "${KUBECONFIG_VALUE}" > /tmp/kubeconfig
               export KUBECONFIG=/tmp/kubeconfig
-              oc port-forward svc/$(params.pod-and-svc-name) 8080:8000 &
+              oc port-forward svc/$(params.pod-and-svc-name) 8000:8080 &
               # Wait briefly to ensure the port-forward is established
               sleep 10
         params:
@@ -99,7 +100,7 @@ spec:
           - name: revision
             value: main
           - name: pathInRepo
-            value: .tekton/integration/rapidast/rapidast-test.yaml
+            value: .tekton/rapidast/rapidast-test.yaml
       params:
         - name: serviceaccount-secret
           value: $(tasks.provision-namespace.results.secretRef)
@@ -108,4 +109,4 @@ spec:
         - name: svc-name
           value: $(params.pod-and-svc-name)
         - name: endpoint
-          value: http://127.0.0.1:8080
+          value: http://127.0.0.1:8000
