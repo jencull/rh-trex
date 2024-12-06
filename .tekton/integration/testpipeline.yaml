@@ -1,5 +1,6 @@
+---
+apiVersion: tekton.dev/v1
 kind: Pipeline
-apiVersion: tekton.dev/v1beta1
 metadata:
   name: deploy-and-test
 spec:
@@ -36,9 +37,25 @@ spec:
           value: $(context.pipelineRun.name)
         - name: PIPELINERUN_UID
           value: $(context.pipelineRun.uid)
-    - name: deploy-container
+
+    - name: debug-secret-ref
       runAfter:
         - provision-namespace
+      taskSpec:
+        params:
+          - name: secretRef
+            type: string
+        steps:
+          - name: print-secret
+            script: |
+              #!/bin/bash
+              echo "Debug: secretRef passed from provision-namespace: $(params.secretRef)"
+      params:
+        - name: secretRef
+          value: $(tasks.provision-namespace.results.secretRef)
+    - name: deploy-container
+      runAfter:
+        - debug-secret-ref
       taskRef:
         resolver: git
         params:
@@ -54,58 +71,4 @@ spec:
         - name: SNAPSHOT
           value: $(params.SNAPSHOT)
         - name: pod-name
-          value: $(params.pod-and-svc-name)
-    - name: hello-world
-      runAfter: 
-        - deploy-container
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/jencull/rh-trex.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: .tekton/integration/tasks/sample-task.yaml
-    - name: port-forward
-      runAfter:
-        - hello-world
-      taskSpec:
-        steps:
-          - name: port-forward
-            image: registry.redhat.io/openshift4/ose-cli:latest
-            script: |
-              #!/usr/bin/env bash
-              echo "${KUBECONFIG_VALUE}" > /tmp/kubeconfig
-              export KUBECONFIG=/tmp/kubeconfig
-              oc port-forward svc/$(params.pod-and-svc-name) 8080:8000 &
-              # Wait briefly to ensure the port-forward is established
-              sleep 10
-        params:
-          - name: KUBECONFIG_VALUE
-            description: Kubeconfig file for accessing the cluster
-            type: string
-          - name: pod-and-svc-name
-            description: Name of the pod and service
-            default: trex
-    - name: run-test
-      runAfter:
-        - port-forward
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/jencull/rh-trex.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: .tekton/integration/rapidast/rapidast-test.yaml
-      params:
-        - name: serviceaccount-secret
-          value: $(tasks.provision-namespace.results.secretRef)
-        - name: SNAPSHOT
-          value: $(params.SNAPSHOT)
-        - name: svc-name
-          value: $(params.pod-and-svc-name)
-        - name: endpoint
-          value: http://127.0.0.1:8080
+          value: $(params.pod-and-svc-name)      

@@ -4,11 +4,11 @@ metadata:
   name: run-test
 spec:
   params:
-    - name: SERVICEACCOUNT
+    - name: serviceaccount-secret
       description: "Secret to service account that can access the ephemeral namespace"
     - name: SNAPSHOT
       description: The JSON string of the Snapshot under test
-    - name: SERVICENAME
+    - name: svc-name
       description: Service URL of the host
   steps:
     - name: rapidast-test
@@ -23,7 +23,7 @@ spec:
         - name: SECRETNAME
           value: $(params.serviceaccount-secret)
         - name: HOSTURL
-          value: $(params.SERVICENAME)
+          value: $(params.svc-name)
       script: |
         #!/bin/bash
         set -ex
