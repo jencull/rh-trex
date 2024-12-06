@@ -1,4 +1,4 @@
-apiVersion: tekton.dev/v1beta1
+apiVersion: tekton.dev/v1
 kind: Task
 metadata:
   name: deploy-container
@@ -29,45 +29,25 @@ spec:
         #!/bin/bash
         set -ex
         set -o pipefail
-
-        # get and set kubeconfig
+       
         oc get secret $SECRETNAME --template '{{.data.kubeconfig}}' | base64 -d > /kubeconfig
         export KUBECONFIG=/kubeconfig
 
         dnf install -y jq gettext
-
         export COMPONENT_CONTAINER_IMAGE=$(jq -r --arg component_name "${COMPONENT_NAME}" '.components[] | select(.name == $component_name) | .containerImage' <<< "${SNAPSHOT}")
-        echo "Component container image: ${COMPONENT_CONTAINER_IMAGE}"
 
-        echo "Deploying pod and service..."
-        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f -
+        echo "Echoing component container image"
 
-        echo "Waiting for the pod to be ready..."
-        oc wait --for=condition=Ready pod/$PODNAME --timeout=120s
+        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
+        CLUSTER_IP=$(oc expose pod $PODNAME -o jsonpath={.spec.clusterIP}) #expose pod port
+        sleep 5 #make sure the pod is running
+        oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000
 
-        # Create the Host URL using Pod DNS and port
-        export HOST_URL=${PODNAME}:8000
-        echo "Host URL: ${HOST_URL}"
+        oc get pods
 
-        # Quick connectivity test using curl
-        echo "Testing connectivity to the pod using curl (Pod DNS)..."
-        if ! curl -v ${HOST_URL}; then
-          echo "Failed to connect to ${HOST_URL}. Debugging required."
-        fi
+        oc describe pod ${PODNAME}
 
-        # Debugging pod and service configuration
-        echo "Debugging pod configuration..."
-        oc describe pod/$PODNAME
-        oc logs pod/$PODNAME
-        oc exec pod/$PODNAME -- ss -tuln || echo "ss command failed"
+        oc port-forward --kubeconfig /kubeconfig ${PODNAME} 8000:8080
 
-        # Additional debugging information
-        echo "Gathering additional debugging information..."
-        oc get --kubeconfig /kubeconfig events
-        oc describe --kubeconfig /kubeconfig pod/$PODNAME
-        oc logs --kubeconfig /kubeconfig pod/$PODNAME
-
-        # Run any additional DAST scans or tests
-        echo "Running DAST scan against: ${HOST_URL}"
-        curl -v "${HOST_URL}"
+        curl -X GET -s http://${CLUSTER_IP}:8000 | python -m json.tool
      

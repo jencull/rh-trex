@@ -1,5 +1,6 @@
+---
+apiVersion: tekton.dev/v1
 kind: Pipeline
-apiVersion: tekton.dev/v1beta1
 metadata:
   name: deploy-and-test
 spec:
@@ -54,9 +55,9 @@ spec:
         - name: SNAPSHOT
           value: $(params.SNAPSHOT)
         - name: pod-name
-          value: $(params.pod-and-svc-name)
-    - name: hello-world
-      runAfter: 
+          value: $(params.pod-and-svc-name)      
+    - name: run-test
+      runAfter:
         - deploy-container
       taskRef:
         resolver: git
@@ -66,40 +67,7 @@ spec:
           - name: revision
             value: main
           - name: pathInRepo
-            value: .tekton/integration/tasks/sample-task.yaml
-    - name: port-forward
-      runAfter:
-        - hello-world
-      taskSpec:
-        steps:
-          - name: port-forward
-            image: registry.redhat.io/openshift4/ose-cli:latest
-            script: |
-              #!/usr/bin/env bash
-              echo "${KUBECONFIG_VALUE}" > /tmp/kubeconfig
-              export KUBECONFIG=/tmp/kubeconfig
-              oc port-forward svc/$(params.pod-and-svc-name) 8080:8000 &
-              # Wait briefly to ensure the port-forward is established
-              sleep 10
-        params:
-          - name: KUBECONFIG_VALUE
-            description: Kubeconfig file for accessing the cluster
-            type: string
-          - name: pod-and-svc-name
-            description: Name of the pod and service
-            default: trex
-    - name: run-test
-      runAfter:
-        - port-forward
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/jencull/rh-trex.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: .tekton/integration/rapidast/rapidast-test.yaml
+            value: .tekton/rapidast/rapidast-test.yaml
       params:
         - name: serviceaccount-secret
           value: $(tasks.provision-namespace.results.secretRef)
@@ -107,5 +75,3 @@ spec:
           value: $(params.SNAPSHOT)
         - name: svc-name
           value: $(params.pod-and-svc-name)
-        - name: endpoint
-          value: http://127.0.0.1:8080
