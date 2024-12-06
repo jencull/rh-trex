@@ -36,6 +36,7 @@ spec:
           value: $(context.pipelineRun.name)
         - name: PIPELINERUN_UID
           value: $(context.pipelineRun.uid)
+    
     - name: deploy-container
       runAfter:
         - provision-namespace
@@ -56,7 +57,7 @@ spec:
         - name: pod-name
           value: $(params.pod-and-svc-name)
     - name: hello-world
-      runAfter: 
+      runAfter:
         - deploy-container
       taskRef:
         resolver: git
