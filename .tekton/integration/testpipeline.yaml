@@ -37,9 +37,25 @@ spec:
           value: $(context.pipelineRun.name)
         - name: PIPELINERUN_UID
           value: $(context.pipelineRun.uid)
-    - name: deploy-container
+
+    - name: debug-secret-ref
       runAfter:
         - provision-namespace
+      taskSpec:
+        params:
+          - name: secretRef
+            type: string
+        steps:
+          - name: print-secret
+            script: |
+              #!/bin/bash
+              echo "Debug: secretRef passed from provision-namespace: $(params.secretRef)"
+      params:
+        - name: secretRef
+          value: $(tasks.provision-namespace.results.secretRef)
+    - name: deploy-container
+      runAfter:
+        - debug-secret-ref
       taskRef:
         resolver: git
         params:
@@ -56,22 +72,5 @@ spec:
           value: $(params.SNAPSHOT)
         - name: pod-name
           value: $(params.pod-and-svc-name)      
-    - name: run-test
-      runAfter:
-        - deploy-container
-      taskRef:
-        resolver: git
-        params:
-          - name: url
-            value: https://github.com/jencull/rh-trex.git
-          - name: revision
-            value: main
-          - name: pathInRepo
-            value: .tekton/rapidast/rapidast-test.yaml
-      params:
-        - name: serviceaccount-secret
-          value: $(tasks.provision-namespace.results.secretRef)
-        - name: SNAPSHOT
-          value: $(params.SNAPSHOT)
-        - name: svc-name
-          value: $(params.pod-and-svc-name)
+
+

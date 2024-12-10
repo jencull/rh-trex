@@ -29,25 +29,42 @@ spec:
         #!/bin/bash
         set -ex
         set -o pipefail
-       
+
+        echo "Using secretRef in deploy-container: $SECRETNAME"
+
+        # Export the kubeconfig using the secret
         oc get secret $SECRETNAME --template '{{.data.kubeconfig}}' | base64 -d > /kubeconfig
         export KUBECONFIG=/kubeconfig
 
-        dnf install -y jq gettext
+        # Install dependencies
+        dnf install -y jq gettext --disableplugin=subscription-manager
+
+        # Extract container image from snapshot
         export COMPONENT_CONTAINER_IMAGE=$(jq -r --arg component_name "${COMPONENT_NAME}" '.components[] | select(.name == $component_name) | .containerImage' <<< "${SNAPSHOT}")
 
-        echo "Echoing component container image"
+        # Fetch, resolve, and log the pod-and-svc.yaml content
+        echo "Fetching and resolving pod-and-svc.yaml..."
+        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst > resolved-pod-and-svc.yaml
 
-        curl https://raw.githubusercontent.com/jencull/rh-trex/main/.tekton/integration/pod-and-svc.yaml | envsubst | oc apply -f - # create pod with test image
-        CLUSTER_IP=$(oc expose pod $PODNAME -o jsonpath={.spec.clusterIP}) #expose pod port
-        sleep 5 #make sure the pod is running
-        oc run -i --tty --rm debug --image=curlimages/curl --restart=Never -- curl ${PODNAME}:8000
+        echo "Resolved pod-and-svc.yaml content:"
+        cat resolved-pod-and-svc.yaml
 
-        oc get pods
+        # Apply the pod and service YAML
+        oc apply -f resolved-pod-and-svc.yaml
 
-        oc describe pod ${PODNAME}
 
-        oc port-forward --kubeconfig /kubeconfig ${PODNAME} 8000:8080
+        # Wait for the pod to be ready using `oc wait`
+        echo "Waiting for pod $PODNAME to be ready..."
+        oc wait --for=condition=Ready pod/$PODNAME --timeout=240s
 
-        curl -X GET -s http://${CLUSTER_IP}:8000 | python -m json.tool
-     
+        # Port forward from local port 8000 to pod port 8080
+        echo "Starting port forward..."
+        oc port-forward --kubeconfig /kubeconfig pod/$PODNAME 8080:8000 &
+
+        # Wait briefly to establish the port-forward
+        sleep 20
+
+        # Test the application using localhost:8080
+        echo "Testing application at http://localhost:8000"
+        curl -X GET -s http://localhost:8080 | jq
+  
