@@ -147,7 +147,7 @@ lint:
 # Build binaries
 # NOTE it may be necessary to use CGO_ENABLED=0 for backwards compatibility with centos7 if not using centos7
 binary: check-gopath
-	${GO} build ./cmd/trex
+	${GO} build -buildvcs=false ./cmd/trex
 .PHONY: binary
 
 # Install
