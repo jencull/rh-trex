@@ -1,10 +1,11 @@
-FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_1.20 AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.21.13-2.1729776560 AS builder
 
+ENV GOPATH=/opt/app-root/src/go
 ENV SOURCE_DIR=/rh-trex
 WORKDIR $SOURCE_DIR
 COPY . $SOURCE_DIR
 
-ENV GOFLAGS=""
+ENV GOFLAGS="-buildvcs=false"
 RUN make binary
 RUN pwd
 
@@ -23,7 +24,7 @@ COPY --from=builder \
 
 EXPOSE 8000
 
-ENTRYPOINT ["/usr/local/bin/trex", "serve"]
+ENTRYPOINT ["/usr/local/bin/trex", "serve", "--enable-https=false"]
 
 LABEL name="trex" \
       vendor="Red Hat, Inc." \
