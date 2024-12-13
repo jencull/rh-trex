@@ -24,7 +24,7 @@ COPY --from=builder \
 
 EXPOSE 8000
 
-ENTRYPOINT ["/usr/local/bin/trex", "serve", "--enable-https=false"]
+ENTRYPOINT ["/usr/local/bin/trex", "serve"]
 
 LABEL name="trex" \
       vendor="Red Hat, Inc." \
