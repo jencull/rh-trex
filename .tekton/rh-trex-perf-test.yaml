@@ -213,8 +213,6 @@ spec:
                 secretKeyRef:
                   name: "$(tasks.provision-env.results.secretRef)"
                   key: kubeconfig          
-          ports:
-            - containerPort: 8000
           script: |
             #!/usr/bin/env bash
             cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
