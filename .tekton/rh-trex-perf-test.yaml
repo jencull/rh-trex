@@ -181,20 +181,6 @@ spec:
             oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/secrets-template.json
             oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/service-template.json
             sleep 60
-
-            # Disable TLS for the application
-            oc set container deployment/trex --command -- \
-            /usr/local/bin/trex serve --db-host-file=/secrets/rds/db.host \
-            --db-port-file=/secrets/rds/db.port \
-            --db-user-file=/secrets/rds/db.user \
-            --db-password-file=/secrets/rds/db.password \
-            --db-name-file=/secrets/rds/db.name \
-            --enable-https=false \
-            --api-server-bindaddress=:8000 \
-            --health-check-server-bindaddress=:8083 \
-            --metrics-server-bindaddress=:8080
-
-        
             oc get --kubeconfig /tmp/cfg all
             oc get --kubeconfig /tmp/cfg events
             oc describe --kubeconfig /tmp/cfg pod -l app=trex
@@ -213,6 +199,8 @@ spec:
             else
               echo -n '$(params.HR_REG_VAR)' | tee $(results.reg_var.path)
             fi
+
+            echo -n "https://$(oc get --kubeconfig /tmp/cfg route trex -o jsonpath='{.spec.host}')" | tee $(results.APP_URL.path)
     - name: run-test
       runAfter: [deploy-app]
       taskSpec:
@@ -246,12 +234,16 @@ spec:
               wget -O /tmp/ocm https://github.com/openshift-online/ocm-cli/releases/download/v0.1.65/ocm-linux-amd64
               chmod +x /tmp/ocm
               cat /tmp/ocm
-              export BASE_URL="http://127.0.0.1:8000"
+              export BASE_URL="https://127.0.0.1:8000"
               echo "URL: ${BASE_URL}"
               /tmp/ocm login --token=${OCM_TOKEN} --url="${BASE_URL}" --debug
-              curl -s -v "${BASE_URL}/api/rh-trex/v1/dinosaurs"
+              curl -k -s -v "${BASE_URL}/api/rh-trex/v1/dinosaurs"
               response=$(curl -s "${BASE_URL}/api/rh-trex/v1/dinosaurs")
+              echo "*******************"
+              curl -k -s -v "${BASE_URL}/api/rh-trex"
+              responseA=$(curl -s "${BASE_URL}/api/rh-trex")
               echo "Response from ${BASE_URL}:"
+              echo "${responseA}"
               echo "${response}"
   finally:
     - name: cleanup  
