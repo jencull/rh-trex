@@ -200,9 +200,6 @@ spec:
               echo -n '$(params.HR_REG_VAR)' | tee $(results.reg_var.path)
             fi
             
-            ROUTE_HOST=$(oc get --kubeconfig /tmp/cfg route ${COMPONENT_NAME} -o jsonpath='{.spec.host}')
-            echo -n "https://${ROUTE_HOST}" | tee $(results.APP_URL.path)
-            echo "The route for ${COMPONENT_NAME} is: https://${ROUTE_HOST}"
     - name: run-test
       runAfter: [deploy-app]
       taskSpec:
