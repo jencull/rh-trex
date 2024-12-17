@@ -186,23 +186,7 @@ spec:
             oc describe --kubeconfig /tmp/cfg pod -l app=trex
             oc logs --kubeconfig /tmp/cfg -l app=trex
 
-            if [ -z $(params.HR_TEST_NAME) ]
-            then
-              echo '$(params.SNAPSHOT)'|jq -r .components[].name |  tr -d '\n\t' | tee $(results.test_name.path)
-            else
-              echo -n  '$(params.HR_TEST_NAME)' | tee $(results.test_name.path)
-            fi            
             
-            if [ -z $(params.HR_REG_VAR) ]
-            then
-              echo -n 'iteration_duration' | tee $(results.reg_var.path)
-            else
-              echo -n '$(params.HR_REG_VAR)' | tee $(results.reg_var.path)
-            fi
-            
-            ROUTE_HOST=$(oc get --kubeconfig /tmp/cfg route ${COMPONENT_NAME} -o jsonpath='{.spec.host}')
-            echo -n "https://${ROUTE_HOST}" | tee $(results.APP_URL.path)
-            echo "The route for ${COMPONENT_NAME} is: https://${ROUTE_HOST}"
     - name: run-test
       runAfter: [deploy-app]
       taskSpec:
@@ -217,10 +201,17 @@ spec:
                   key: kubeconfig          
           script: |
             #!/usr/bin/env bash
+            set -ex 
             cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
             export KUBECONFIG=/tmp/cfg
-            oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000
-            sleep 5
+
+            echo "Starting port-forward for service/trex on port 8000..."
+            # Run port-forward in the background and log its output
+            oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000 &
+            sleep 5 
+
+            echo "Checking /tekton/scripts directory:"
+            ls -la /tekton/scripts 
         steps:
           - name: get-url
             image: registry.redhat.io/openshift4/ose-cli:latest
@@ -231,39 +222,18 @@ spec:
                   name: ocm
                   key: ocmtoken          
             script: |
-              wget -O /tmp/ocm https://github.com/openshift-online/ocm-cli/releases/download/v0.1.65/ocm-linux-amd64
-              chmod +x /tmp/ocm
-              cat /tmp/ocm
+              #!/usr/bin/env bash
+              set -ex
+              
               export BASE_URL="https://127.0.0.1:8000"
-              echo "URL: ${BASE_URL}"
-              /tmp/ocm login --token=${OCM_TOKEN} --url="${BASE_URL}" --debug
-              curl -k -s -v "${BASE_URL}/api/rh-trex/v1/dinosaurs"
-              response=$(curl -s "${BASE_URL}/api/rh-trex/v1/dinosaurs")
-              echo "*******************"
-              curl -k -s -v "${BASE_URL}/api/rh-trex"
-              responseA=$(curl -s "${BASE_URL}/api/rh-trex")
-              echo "Response from ${BASE_URL}:"
-              echo "${responseA}"
-              echo "${response}"
-  finally:
-    - name: cleanup  
-      params:
-        - name: aggregateTasksStatus
-          value: "$(tasks.status)"
-      taskSpec:
-        results:
-          - name: TEST_OUTPUT
-        params:
-          - name: aggregateTasksStatus
-        steps:
-        - image: quay.io/rh-ee-jcullina/curl-yq-jq  
-          name: step1
-          script: |
-            RESULT="SUCCESS"
-            if [ $(params.aggregateTasksStatus) == "Failed" ]
-            then
-              RESULT="FAILURE"
-            fi
-            TEST_OUTPUT=$(jq -rc --arg date $(date +%s) --arg RESULT "${RESULT}" --null-input \
-            '{result: $RESULT, timestamp: $date, failures: 0, successes: 0, warnings: 0}')
-            echo -n "${TEST_OUTPUT}" | tee $(results.TEST_OUTPUT.path)
+              echo "Base URL for testing: ${BASE_URL}"
+
+              if [ -z "${OCM_TOKEN}" ]; then
+                echo "ERROR: OCM_TOKEN is missing. Check your secret configuration."
+                exit 1
+              fi
+
+              # Make the API request with the token
+              echo "Requesting ${BASE_URL}/api/rh-trex/v1/dinosaurs..."
+              curl -k -v -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs"
+              echo request completed
