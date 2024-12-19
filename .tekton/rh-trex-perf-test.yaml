@@ -132,75 +132,74 @@ spec:
           - name: TEST_OUTPUT
             description: Test output             
         steps:
-        - name: step-one
-          image: registry.redhat.io/openshift4/ose-cli:latest
-          env:
-            - name: SNAPSHOT
-              value: $(params.SNAPSHOT)
-            - name: KUBECONFIG_VALUE
-              valueFrom:
-                secretKeyRef:
-                  name: "$(tasks.provision-env.results.secretRef)"
-                  key: kubeconfig
-            - name: CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: ocm
-                  key: client_id
-            - name: CLIENT_SEC
-              valueFrom:
-                secretKeyRef:
-                  name: ocm
-                  key: client_secret                      
-          script: |
-            #!/usr/bin/env bash
-            cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
-            dnf -y install jq git
-            export KUBECONFIG=/tmp/cfg
+          - name: placeholder-name
+            image: registry.redhat.io/openshift4/ose-cli:latest
+            env:
+              - name: SNAPSHOT
+                value: $(params.SNAPSHOT)
+              - name: KUBECONFIG_VALUE
+                valueFrom:
+                  secretKeyRef:
+                    name: "$(tasks.provision-env.results.secretRef)"
+                    key: kubeconfig
+              - name: CLIENT_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: ocm
+                    key: client_id
+              - name: CLIENT_SEC
+                valueFrom:
+                  secretKeyRef:
+                    name: ocm
+                    key: client_secret                      
+            script: |
+              #!/usr/bin/env bash
+              cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
+              dnf -y install jq git
+              export KUBECONFIG=/tmp/cfg
 
-            # Get the route for the application endpoint
-            COMPONENT_NAME=$(echo -n ${SNAPSHOT} | jq -r .components[0].name)
-            # The --insecure-skip-tls-verify option is added for local testing
-            # when the clusters only have self-signed certificates.
-            # This option should not be used in production.
+              # Get the route for the application endpoint
+              COMPONENT_NAME=$(echo -n ${SNAPSHOT} | jq -r .components[0].name)
+              # The --insecure-skip-tls-verify option is added for local testing
+              # when the clusters only have self-signed certificates.
+              # This option should not be used in production.
 
-            TARGET_COMPONENT_NAME="/tmp/rh-trex"
-            REPO_URL=$(echo $SNAPSHOT | jq -r '.components[] | .source.git.url')
-            REPO_COMMIT=$(echo $SNAPSHOT | jq -r '.components[] | .source.git.revision')
-            REPO_IMG=$(echo $SNAPSHOT | jq -r '.components[] | .containerImage')
-            git clone $REPO_URL $TARGET_COMPONENT_NAME
-            cd $TARGET_COMPONENT_NAME
-            git checkout $REPO_COMMIT
-            rev=$(echo ${REPO_IMG#*/})
-            image_reg=$(echo ${REPO_IMG%%/*})
-            image_tag=$(echo ${rev#*:})
-            image_rep=$(echo ${rev%:*})
-            mkdir -p /tmp/templates/
-            for i in $(ls templates/*yml); do j=${i#*/}; outf=${j%.*};oc process --kubeconfig /tmp/cfg --filename="$i" --local="true" --ignore-unknown-parameters="true" --param="ENVIRONMENT"=development --param="GLOG_V"=10  --param="DATABASE_HOST"=trex-db.$(oc project --short) --param="DATABASE_NAME"=rhtrex  --param="DATABASE_PASSWORD"=foobar-bizz-buzz  --param="DATABASE_PORT"=5432 --param="DATABASE_USER"=trex  --param="DATABASE_SSLMODE"=disable --param="ENABLE_SENTRY"=false --param="SENTRY_KEY"=TODO --param="JWKS_URL"=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/certs  --param="OCM_SERVICE_CLIENT_ID"=${CLIENT_ID} --param="OCM_SERVICE_CLIENT_SECRET"=${CLIENT_SEC}  --param="OCM_BASE_URL"=https://api.integration.openshift.com --param="IMAGE_REGISTRY="$image_reg --param="IMAGE_REPOSITORY="$image_rep --param="IMAGE_TAG="$image_tag  > /tmp/templates/${outf}.json; done
-            oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/db-template.json
-            sleep 60
-            oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/secrets-template.json
-            oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/service-template.json
-            sleep 60
-            oc get --kubeconfig /tmp/cfg all
-            oc get --kubeconfig /tmp/cfg events
-            oc describe --kubeconfig /tmp/cfg pod -l app=trex
-            oc logs --kubeconfig /tmp/cfg -l app=trex
+              TARGET_COMPONENT_NAME="/tmp/rh-trex"
+              REPO_URL=$(echo $SNAPSHOT | jq -r '.components[] | .source.git.url')
+              REPO_COMMIT=$(echo $SNAPSHOT | jq -r '.components[] | .source.git.revision')
+              REPO_IMG=$(echo $SNAPSHOT | jq -r '.components[] | .containerImage')
+              git clone $REPO_URL $TARGET_COMPONENT_NAME
+              cd $TARGET_COMPONENT_NAME
+              git checkout $REPO_COMMIT
+              rev=$(echo ${REPO_IMG#*/})
+              image_reg=$(echo ${REPO_IMG%%/*})
+              image_tag=$(echo ${rev#*:})
+              image_rep=$(echo ${rev%:*})
+              mkdir -p /tmp/templates/
+              for i in $(ls templates/*yml); do j=${i#*/}; outf=${j%.*};oc process --kubeconfig /tmp/cfg --filename="$i" --local="true" --ignore-unknown-parameters="true" --param="ENVIRONMENT"=development --param="GLOG_V"=10  --param="DATABASE_HOST"=trex-db.$(oc project --short) --param="DATABASE_NAME"=rhtrex  --param="DATABASE_PASSWORD"=foobar-bizz-buzz  --param="DATABASE_PORT"=5432 --param="DATABASE_USER"=trex  --param="DATABASE_SSLMODE"=disable --param="ENABLE_SENTRY"=false --param="SENTRY_KEY"=TODO --param="JWKS_URL"=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/certs  --param="OCM_SERVICE_CLIENT_ID"=${CLIENT_ID} --param="OCM_SERVICE_CLIENT_SECRET"=${CLIENT_SEC}  --param="OCM_BASE_URL"=https://api.integration.openshift.com --param="IMAGE_REGISTRY="$image_reg --param="IMAGE_REPOSITORY="$image_rep --param="IMAGE_TAG="$image_tag  > /tmp/templates/${outf}.json; done
+              oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/db-template.json
+              sleep 60
+              oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/secrets-template.json
+              oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/service-template.json
+              sleep 60
+              oc get --kubeconfig /tmp/cfg all
+              oc get --kubeconfig /tmp/cfg events
+              oc describe --kubeconfig /tmp/cfg pod -l app=trex
+              oc logs --kubeconfig /tmp/cfg -l app=trex
 
-            if [ -z $(params.HR_TEST_NAME) ]
-            then
-              echo '$(params.SNAPSHOT)'|jq -r .components[].name |  tr -d '\n\t' | tee $(results.test_name.path)
-            else
-              echo -n  '$(params.HR_TEST_NAME)' | tee $(results.test_name.path)
-            fi            
+              if [ -z $(params.HR_TEST_NAME) ]
+              then
+                echo '$(params.SNAPSHOT)'|jq -r .components[].name |  tr -d '\n\t' | tee $(results.test_name.path)
+              else
+                echo -n  '$(params.HR_TEST_NAME)' | tee $(results.test_name.path)
+              fi            
             
-            if [ -z $(params.HR_REG_VAR) ]
-            then
-              echo -n 'iteration_duration' | tee $(results.reg_var.path)
-            else
-              echo -n '$(params.HR_REG_VAR)' | tee $(results.reg_var.path)
-            fi
-            echo -n "https://$(oc get --kubeconfig /tmp/cfg route trex -o jsonpath='{.spec.host}')" | tee $(results.APP_URL.path)     
+              if [ -z $(params.HR_REG_VAR) ]
+              then
+                echo -n 'iteration_duration' | tee $(results.reg_var.path)
+              else
+                echo -n '$(params.HR_REG_VAR)' | tee $(results.reg_var.path)
+              fi
     - name: run-test
       runAfter: [deploy-app]
       taskSpec:
@@ -239,7 +238,6 @@ spec:
                   name: ocm
                   key: ocmtoken          
             script: |
-
               #!/usr/bin/env bash
               set -ex
               
@@ -251,7 +249,6 @@ spec:
                 exit 1
               fi
 
-              # Make the API request with the token
               echo "Requesting ${BASE_URL}/api/rh-trex/v1/dinosaurs..."
               curl -k -v -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo request completed
