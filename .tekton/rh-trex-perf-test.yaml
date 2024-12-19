@@ -132,7 +132,8 @@ spec:
           - name: TEST_OUTPUT
             description: Test output             
         steps:
-        - image: registry.redhat.io/openshift4/ose-cli:latest
+        - name: step-one
+          image: registry.redhat.io/openshift4/ose-cli:latest
           env:
             - name: SNAPSHOT
               value: $(params.SNAPSHOT)
@@ -181,24 +182,25 @@ spec:
             oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/secrets-template.json
             oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/service-template.json
             sleep 60
-
-            # Disable TLS for the application
-            oc set container deployment/trex --command -- \
-            /usr/local/bin/trex serve --db-host-file=/secrets/rds/db.host \
-            --db-port-file=/secrets/rds/db.port \
-            --db-user-file=/secrets/rds/db.user \
-            --db-password-file=/secrets/rds/db.password \
-            --db-name-file=/secrets/rds/db.name \
-            --enable-https=false \
-            --api-server-bindaddress=:8000 \
-            --health-check-server-bindaddress=:8083 \
-            --metrics-server-bindaddress=:8080
-
-        
             oc get --kubeconfig /tmp/cfg all
             oc get --kubeconfig /tmp/cfg events
             oc describe --kubeconfig /tmp/cfg pod -l app=trex
-            oc logs --kubeconfig /tmp/cfg -l app=trex       
+            oc logs --kubeconfig /tmp/cfg -l app=trex
+
+            if [ -z $(params.HR_TEST_NAME) ]
+            then
+              echo '$(params.SNAPSHOT)'|jq -r .components[].name |  tr -d '\n\t' | tee $(results.test_name.path)
+            else
+              echo -n  '$(params.HR_TEST_NAME)' | tee $(results.test_name.path)
+            fi            
+            
+            if [ -z $(params.HR_REG_VAR) ]
+            then
+              echo -n 'iteration_duration' | tee $(results.reg_var.path)
+            else
+              echo -n '$(params.HR_REG_VAR)' | tee $(results.reg_var.path)
+            fi
+            echo -n "https://$(oc get --kubeconfig /tmp/cfg route trex -o jsonpath='{.spec.host}')" | tee $(results.APP_URL.path)     
     - name: run-test
       runAfter: [deploy-app]
       taskSpec:
