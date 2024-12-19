@@ -334,7 +334,7 @@ objects:
         port: api
       annotations:
         description: Exposes and load balances the account manager pods
-        # service.beta.openshift.io/serving-cert-secret-name: trex-tls
+        service.beta.openshift.io/serving-cert-secret-name: trex-tls
     spec:
       selector:
         app: trex
