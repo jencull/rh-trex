@@ -181,12 +181,24 @@ spec:
             oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/secrets-template.json
             oc apply --kubeconfig /tmp/cfg  -f /tmp/templates/service-template.json
             sleep 60
+
+            # Disable TLS for the application
+            oc set container deployment/trex --command -- \
+            /usr/local/bin/trex serve --db-host-file=/secrets/rds/db.host \
+            --db-port-file=/secrets/rds/db.port \
+            --db-user-file=/secrets/rds/db.user \
+            --db-password-file=/secrets/rds/db.password \
+            --db-name-file=/secrets/rds/db.name \
+            --enable-https=false \
+            --api-server-bindaddress=:8000 \
+            --health-check-server-bindaddress=:8083 \
+            --metrics-server-bindaddress=:8080
+
+        
             oc get --kubeconfig /tmp/cfg all
             oc get --kubeconfig /tmp/cfg events
             oc describe --kubeconfig /tmp/cfg pod -l app=trex
-            oc logs --kubeconfig /tmp/cfg -l app=trex
-
-            
+            oc logs --kubeconfig /tmp/cfg -l app=trex       
     - name: run-test
       runAfter: [deploy-app]
       taskSpec:
@@ -199,11 +211,14 @@ spec:
                 secretKeyRef:
                   name: "$(tasks.provision-env.results.secretRef)"
                   key: kubeconfig          
+          ports:
+            - containerPort: 8000
           script: |
             #!/usr/bin/env bash
             set -ex 
             cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
             export KUBECONFIG=/tmp/cfg
+
 
             echo "Starting port-forward for service/trex on port 8000..."
             # Run port-forward in the background and log its output
@@ -222,6 +237,7 @@ spec:
                   name: ocm
                   key: ocmtoken          
             script: |
+
               #!/usr/bin/env bash
               set -ex
               
@@ -237,3 +253,4 @@ spec:
               echo "Requesting ${BASE_URL}/api/rh-trex/v1/dinosaurs..."
               curl -k -v -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo request completed
+
