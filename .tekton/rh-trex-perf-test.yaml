@@ -104,10 +104,6 @@ spec:
       params:
         - name: SNAPSHOT
           value: $(params.SNAPSHOT)
-        - name: HR_TEST_NAME
-          value: $(params.HR_TEST_NAME)          
-        - name: HR_REG_VAR
-          value: $(params.HR_REG_VAR)
       taskSpec:
         params:
           - name: SNAPSHOT
@@ -117,22 +113,16 @@ spec:
             description: Namespace of the application under test
           - default: ""
             name: PORT
-            description: Application endpoint Port
-          - name: HR_TEST_NAME
-            description: 'Horreum Test Name'            
-          - name: HR_REG_VAR
-            description: 'Horreum regression variable'            
+            description: Application endpoint Port         
         results:
           - name: APP_URL
             description: APP URL
-          - name: test_name
-            description: Test name
           - name: reg_var
             description: Regression variable             
           - name: TEST_OUTPUT
             description: Test output             
         steps:
-        - name: step-one
+        - name: deploy-app
           image: registry.redhat.io/openshift4/ose-cli:latest
           env:
             - name: SNAPSHOT
@@ -154,15 +144,16 @@ spec:
                   key: client_secret                      
           script: |
             #!/usr/bin/env bash
+            set -ex
+
             cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
-            dnf -y install jq git
             export KUBECONFIG=/tmp/cfg
 
-            # Get the route for the application endpoint
             COMPONENT_NAME=$(echo -n ${SNAPSHOT} | jq -r .components[0].name)
-            # The --insecure-skip-tls-verify option is added for local testing
-            # when the clusters only have self-signed certificates.
-            # This option should not be used in production.
+            CONTAINER_IMAGE=$(echo -n ${SNAPSHOT} | jq -r .components[0].containerImage)
+        
+            echo "Deploying application: $COMPONENT_NAME"
+            echo "Using container image: $CONTAINER_IMAGE"
 
             TARGET_COMPONENT_NAME="/tmp/rh-trex"
             REPO_URL=$(echo $SNAPSHOT | jq -r '.components[] | .source.git.url')
@@ -186,21 +177,12 @@ spec:
             oc get --kubeconfig /tmp/cfg events
             oc describe --kubeconfig /tmp/cfg pod -l app=trex
             oc logs --kubeconfig /tmp/cfg -l app=trex
-
-            if [ -z $(params.HR_TEST_NAME) ]
-            then
-              echo '$(params.SNAPSHOT)'|jq -r .components[].name |  tr -d '\n\t' | tee $(results.test_name.path)
-            else
-              echo -n  '$(params.HR_TEST_NAME)' | tee $(results.test_name.path)
-            fi            
             
-            if [ -z $(params.HR_REG_VAR) ]
-            then
-              echo -n 'iteration_duration' | tee $(results.reg_var.path)
-            else
-              echo -n '$(params.HR_REG_VAR)' | tee $(results.reg_var.path)
-            fi
-            echo -n "https://$(oc get --kubeconfig /tmp/cfg route trex -o jsonpath='{.spec.host}')" | tee $(results.APP_URL.path)     
+            oc rollout status deployment/$COMPONENT_NAME
+        
+            echo -n "${COMPONENT_NAME}" > $(results.APP_NAME.path)
+            echo -n "127.0.0.1" > $(results.APP_URL.path) 
+            echo -n "8000" > $(results.APP_PORT.path)  
     - name: run-test
       runAfter: [deploy-app]
       taskSpec:
@@ -239,7 +221,6 @@ spec:
                   name: ocm
                   key: ocmtoken          
             script: |
-
               #!/usr/bin/env bash
               set -ex
               
@@ -251,7 +232,6 @@ spec:
                 exit 1
               fi
 
-              # Make the API request with the token
               echo "Requesting ${BASE_URL}/api/rh-trex/v1/dinosaurs..."
               curl -k -v -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo request completed
