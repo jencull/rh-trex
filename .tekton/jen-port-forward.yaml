@@ -192,16 +192,16 @@ spec:
               oc describe --kubeconfig /tmp/cfg pod -l app=trex
               oc logs --kubeconfig /tmp/cfg -l app=trex
 
-              # Fetch the ClusterIP for the trex service
-              CLUSTER_IP=$(kubectl get service trex -o jsonpath='{.spec.clusterIP}')
+              # Fetch the Pod IP for the trex service
+              POD_IP=$(kubectl get pod -l app=trex -o jsonpath='{.items[0].status.podIP}')
               SERVICE_PORT=8000
 
-              if [ -z "$CLUSTER_IP" ]; then
-                echo "Error: Unable to retrieve ClusterIP for the trex service. Exiting."
+              if [ -z "$POD_IP" ]; then
+                echo "Error: Unable to retrieve Pod IP for the trex pod. Exiting."
                 exit 1
               fi
 
-              SERVICE_URL="http://${CLUSTER_IP}:${SERVICE_PORT}"
+              SERVICE_URL="http://${POD_IP}:${SERVICE_PORT}"
               echo "Service is accessible at: ${SERVICE_URL}"
 
               # Authenticate using the OCM token
@@ -218,6 +218,7 @@ spec:
               }
 
               echo "Successfully fetched dinosaurs from ${SERVICE_URL}."
+
 
               if [ -z $(params.HR_TEST_NAME) ]
               then
