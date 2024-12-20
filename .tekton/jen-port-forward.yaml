@@ -240,7 +240,7 @@ spec:
               #!/usr/bin/env bash
               set -ex
               
-              BASE_URL="https://127.0.0.1:8000"
+              BASE_URL="http://127.0.0.1:8000"
               echo "Base URL for testing: ${BASE_URL}"
 
               if [ -z "${OCM_TOKEN}" ]; then
