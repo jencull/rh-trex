@@ -192,34 +192,6 @@ spec:
               oc describe --kubeconfig /tmp/cfg pod -l app=trex
               oc logs --kubeconfig /tmp/cfg -l app=trex
 
-              # Fetch the Pod IP for the trex service
-              POD_IP=$(kubectl get pod -l app=trex -o jsonpath='{.items[0].status.podIP}')
-              SERVICE_PORT=8000
-
-              if [ -z "$POD_IP" ]; then
-                echo "Error: Unable to retrieve Pod IP for the trex pod. Exiting."
-                exit 1
-              fi
-
-              SERVICE_URL="http://${POD_IP}:${SERVICE_PORT}"
-              echo "Service is accessible at: ${SERVICE_URL}"
-
-              # Authenticate using the OCM token
-              echo "Authenticating with the service at ${SERVICE_URL}..."
-              wget -O /tmp/ocm https://github.com/openshift-online/ocm-cli/releases/download/v0.1.65/ocm-linux-amd64
-              chmod +x /tmp/ocm
-              /tmp/ocm login --token="${OCM_TOKEN}" --url="${SERVICE_URL}" --debug
-
-              # Test the endpoint for the list of dinosaurs
-              echo "Fetching list of dinosaurs from ${SERVICE_URL}..."
-              /tmp/ocm get /api/rh-trex/v1/dinosaurs || {
-                echo "Error: Unable to fetch dinosaurs. Exiting."
-                exit 1
-              }
-
-              echo "Successfully fetched dinosaurs from ${SERVICE_URL}."
-
-
               if [ -z $(params.HR_TEST_NAME) ]
               then
                 echo '$(params.SNAPSHOT)'|jq -r .components[].name |  tr -d '\n\t' | tee $(results.test_name.path)
@@ -294,5 +266,14 @@ spec:
               echo "Requesting ${BASE_URL}/api/rh-trex/v1/dinosaurs..."
               curl -k -v -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo request completed
+
+              echo "Verifying the response from the dinosaurs endpoint..."
+              if [ -z "$RESPONSE" ]; then
+                echo "ERROR: No response received from the dinosaurs endpoint. Exiting."
+                exit 1
+              fi
+
+              echo "Response from dinosaurs endpoint: $RESPONSE"
+              echo "Service is functional and responding as expected."
   
        
