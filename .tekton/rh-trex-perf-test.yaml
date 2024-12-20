@@ -185,12 +185,8 @@ spec:
               oc describe --kubeconfig /tmp/cfg pod -l app=trex
               oc logs --kubeconfig /tmp/cfg -l app=trex
 
-              # Ensure the application is deployed
-              oc rollout status deployment/$COMPONENT_NAME
-
-              # Export results for port-forwarding
               echo -n "$COMPONENT_NAME" | tee $(results.APP_NAME.path)
-              echo -n "127.0.0.1" | tee $(results.APP_HOST.path)
+              echo -n "svc/$COMPONENT_NAME" | tee $(results.APP_HOST.path)
               echo -n "8000" | tee $(results.APP_PORT.path)
     - name: run-test
       runAfter: [deploy-app]
@@ -212,7 +208,6 @@ spec:
             cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
             export KUBECONFIG=/tmp/cfg
 
-
             echo "Starting port-forward for service/trex on port 8000..."
             # Run port-forward in the background and log its output
             oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000 &
@@ -233,7 +228,7 @@ spec:
               #!/usr/bin/env bash
               set -ex
               
-              export BASE_URL="https://127.0.0.1:8000"
+              BASE_URL="https://127.0.0.1:8000"
               echo "Base URL for testing: ${BASE_URL}"
 
               if [ -z "${OCM_TOKEN}" ]; then
