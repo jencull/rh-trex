@@ -151,7 +151,12 @@ spec:
                 valueFrom:
                   secretKeyRef:
                     name: ocm
-                    key: client_secret                      
+                    key: client_secret
+              - name: OCM_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: ocm
+                    key: ocmtoken                      
             script: |
               #!/usr/bin/env bash
               cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
@@ -186,6 +191,29 @@ spec:
               oc get --kubeconfig /tmp/cfg events
               oc describe --kubeconfig /tmp/cfg pod -l app=trex
               oc logs --kubeconfig /tmp/cfg -l app=trex
+
+              # Extract service route for testing
+              SERVICE_ROUTE=$(oc get route trex -o jsonpath='{.spec.host}' --kubeconfig=/tmp/cfg)
+              echo "Service is accessible at: http://${SERVICE_ROUTE}"
+
+              # Verify service endpoint
+              echo "Authenticating with the service..."
+              if [ -z "${OCM_TOKEN}" ]; then
+                echo "ERROR: OCM_TOKEN is missing. Check your configuration."
+                exit 1
+              fi
+
+              # Download and setup ocm CLI
+              wget -O /tmp/ocm https://github.com/openshift-online/ocm-cli/releases/download/v0.1.65/ocm-linux-amd64
+              chmod +x /tmp/ocm
+              /tmp/ocm login --token=${OCM_TOKEN} --url=http://${SERVICE_ROUTE} --insecure --debug
+
+              # Fetch list of dinosaurs
+              echo "Fetching list of dinosaurs from endpoint..."
+              /tmp/ocm get /api/rh-trex/v1/dinosaurs || {
+                echo "Error fetching dinosaurs. Exiting."
+                exit 1
+              }
 
               if [ -z $(params.HR_TEST_NAME) ]
               then
