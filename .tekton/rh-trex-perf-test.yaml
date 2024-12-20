@@ -154,15 +154,13 @@ spec:
                     key: client_secret                      
             script: |
               #!/usr/bin/env bash
+              set -ex
               cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
               dnf -y install jq git
               export KUBECONFIG=/tmp/cfg
 
-              # Get the route for the application endpoint
               COMPONENT_NAME=$(echo -n ${SNAPSHOT} | jq -r .components[0].name)
-              # The --insecure-skip-tls-verify option is added for local testing
-              # when the clusters only have self-signed certificates.
-              # This option should not be used in production.
+              echo "Deploying application: $COMPONENT_NAME"
 
               TARGET_COMPONENT_NAME="/tmp/rh-trex"
               REPO_URL=$(echo $SNAPSHOT | jq -r '.components[] | .source.git.url')
@@ -187,19 +185,13 @@ spec:
               oc describe --kubeconfig /tmp/cfg pod -l app=trex
               oc logs --kubeconfig /tmp/cfg -l app=trex
 
-              if [ -z $(params.HR_TEST_NAME) ]
-              then
-                echo '$(params.SNAPSHOT)'|jq -r .components[].name |  tr -d '\n\t' | tee $(results.test_name.path)
-              else
-                echo -n  '$(params.HR_TEST_NAME)' | tee $(results.test_name.path)
-              fi            
-            
-              if [ -z $(params.HR_REG_VAR) ]
-              then
-                echo -n 'iteration_duration' | tee $(results.reg_var.path)
-              else
-                echo -n '$(params.HR_REG_VAR)' | tee $(results.reg_var.path)
-              fi
+              # Ensure the application is deployed
+              oc rollout status deployment/$COMPONENT_NAME
+
+              # Export results for port-forwarding
+              echo -n "$COMPONENT_NAME" | tee $(results.APP_NAME.path)
+              echo -n "127.0.0.1" | tee $(results.APP_HOST.path)
+              echo -n "8000" | tee $(results.APP_PORT.path)
     - name: run-test
       runAfter: [deploy-app]
       taskSpec:
@@ -224,7 +216,7 @@ spec:
             echo "Starting port-forward for service/trex on port 8000..."
             # Run port-forward in the background and log its output
             oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000 &
-            sleep 5 
+            sleep 20 
 
             echo "Checking /tekton/scripts directory:"
             ls -la /tekton/scripts 
