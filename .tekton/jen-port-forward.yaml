@@ -192,28 +192,32 @@ spec:
               oc describe --kubeconfig /tmp/cfg pod -l app=trex
               oc logs --kubeconfig /tmp/cfg -l app=trex
 
-              # Extract service route for testing
-              SERVICE_ROUTE=$(oc get route trex -o jsonpath='{.spec.host}' --kubeconfig=/tmp/cfg)
-              echo "Service is accessible at: http://${SERVICE_ROUTE}"
+              # Fetch the ClusterIP for the trex service
+              CLUSTER_IP=$(kubectl get service trex -o jsonpath='{.spec.clusterIP}')
+              SERVICE_PORT=8000
 
-              # Verify service endpoint
-              echo "Authenticating with the service..."
-              if [ -z "${OCM_TOKEN}" ]; then
-                echo "ERROR: OCM_TOKEN is missing. Check your configuration."
+              if [ -z "$CLUSTER_IP" ]; then
+                echo "Error: Unable to retrieve ClusterIP for the trex service. Exiting."
                 exit 1
               fi
 
-              # Download and setup ocm CLI
+              SERVICE_URL="http://${CLUSTER_IP}:${SERVICE_PORT}"
+              echo "Service is accessible at: ${SERVICE_URL}"
+
+              # Authenticate using the OCM token
+              echo "Authenticating with the service at ${SERVICE_URL}..."
               wget -O /tmp/ocm https://github.com/openshift-online/ocm-cli/releases/download/v0.1.65/ocm-linux-amd64
               chmod +x /tmp/ocm
-              /tmp/ocm login --token=${OCM_TOKEN} --url=http://${SERVICE_ROUTE} --insecure --debug
+              /tmp/ocm login --token="${OCM_TOKEN}" --url="${SERVICE_URL}" --debug
 
-              # Fetch list of dinosaurs
-              echo "Fetching list of dinosaurs from endpoint..."
+              # Test the endpoint for the list of dinosaurs
+              echo "Fetching list of dinosaurs from ${SERVICE_URL}..."
               /tmp/ocm get /api/rh-trex/v1/dinosaurs || {
-                echo "Error fetching dinosaurs. Exiting."
+                echo "Error: Unable to fetch dinosaurs. Exiting."
                 exit 1
               }
+
+              echo "Successfully fetched dinosaurs from ${SERVICE_URL}."
 
               if [ -z $(params.HR_TEST_NAME) ]
               then
