@@ -227,6 +227,11 @@ spec:
           script: |
             #!/usr/bin/env bash
             set -ex 
+            if [ ! -d /tekton/scripts ]; then
+              echo "ERROR: /tekton/scripts does not exist. Exiting."
+              exit 1
+            fi
+            chmod -R 755 /tekton/scripts
             cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
             export KUBECONFIG=/tmp/cfg
 
@@ -237,9 +242,25 @@ spec:
             echo "Starting port-forward for service/trex on port 8000..."
             # Run port-forward in the background and log its output
             oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000 &
-            sleep 20
+            sleep 60
+            
+            echo "Checking service availability on http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs..."
+            for i in {1..5}; do
+              if curl -s http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs; then
+                echo "Service is available."
+                break
+              else
+                echo "Service not available, retrying in 5 seconds..."
+                sleep 5
+              fi
+            done
+
             if ! curl -s http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs; then
-              echo "Port-forwarding failed or service unavailable."
+              echo "ERROR: Service failed to respond after multiple retries. Exiting."
+              exit 1
+            fi
+            if ! curl -s http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs; then
+              echo "ERROR: Service failed to respond after multiple retries. Exiting."
               exit 1
             fi
         steps:
@@ -264,8 +285,10 @@ spec:
               fi
 
               echo "Requesting ${BASE_URL}/api/rh-trex/v1/dinosaurs..."
-              curl -k -v -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs"
-              echo request completed
+              RESPONSE=""
+              for i in {1..5}; do
+                RESPONSE=$(curl -s -k -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs") && break || sleep 5
+              done
 
               echo "Verifying the response from the dinosaurs endpoint..."
               if [ -z "$RESPONSE" ]; then
