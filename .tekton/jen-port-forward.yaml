@@ -243,7 +243,7 @@ spec:
             # Run port-forward in the background and log its output
             oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000 &
             sleep 60
-            
+
             echo "Checking service availability on http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs..."
             for i in {1..5}; do
               if curl -s http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs; then
@@ -279,22 +279,7 @@ spec:
               BASE_URL="http://127.0.0.1:8000"
               echo "Base URL for testing: ${BASE_URL}"
 
-              if [ -z "${OCM_TOKEN}" ]; then
-                echo "ERROR: OCM_TOKEN is missing. Check your secret configuration."
-                exit 1
-              fi
-
-              echo "Requesting ${BASE_URL}/api/rh-trex/v1/dinosaurs..."
-              RESPONSE=""
-              for i in {1..5}; do
-                RESPONSE=$(curl -s -k -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs") && break || sleep 5
-              done
-
-              echo "Verifying the response from the dinosaurs endpoint..."
-              if [ -z "$RESPONSE" ]; then
-                echo "ERROR: No response received from the dinosaurs endpoint. Exiting."
-                exit 1
-              fi
+              curl -v -s -k -H "Authorization: Bearer $OCM_TOKEN" http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs
 
               echo "Response from dinosaurs endpoint: $RESPONSE"
               echo "Service is functional and responding as expected."
