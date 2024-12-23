@@ -1,4 +1,5 @@
-apiVersion: tekton.dev/v1beta1 
+---
+apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
   name: integration-test-app
@@ -151,12 +152,7 @@ spec:
                 valueFrom:
                   secretKeyRef:
                     name: ocm
-                    key: client_secret
-              - name: OCM_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name: ocm
-                    key: ocmtoken                      
+                    key: client_secret                      
             script: |
               #!/usr/bin/env bash
               cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
@@ -227,11 +223,6 @@ spec:
           script: |
             #!/usr/bin/env bash
             set -ex 
-            if [ ! -d /tekton/scripts ]; then
-              echo "ERROR: /tekton/scripts does not exist. Exiting."
-              exit 1
-            fi
-            chmod -R 755 /tekton/scripts
             cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
             export KUBECONFIG=/tmp/cfg
 
@@ -242,25 +233,9 @@ spec:
             echo "Starting port-forward for service/trex on port 8000..."
             # Run port-forward in the background and log its output
             oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000 &
-            sleep 60
-
-            echo "Checking service availability on http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs..."
-            for i in {1..5}; do
-              if curl -s http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs; then
-                echo "Service is available."
-                break
-              else
-                echo "Service not available, retrying in 5 seconds..."
-                sleep 5
-              fi
-            done
-
+            sleep 20
             if ! curl -s http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs; then
-              echo "ERROR: Service failed to respond after multiple retries. Exiting."
-              exit 1
-            fi
-            if ! curl -s http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs; then
-              echo "ERROR: Service failed to respond after multiple retries. Exiting."
+              echo "Port-forwarding failed or service unavailable."
               exit 1
             fi
         steps:
@@ -279,9 +254,13 @@ spec:
               BASE_URL="http://127.0.0.1:8000"
               echo "Base URL for testing: ${BASE_URL}"
 
-              curl -v -s -k -H "Authorization: Bearer $OCM_TOKEN" http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs
+              if [ -z "${OCM_TOKEN}" ]; then
+                echo "ERROR: OCM_TOKEN is missing. Check your secret configuration."
+                exit 1
+              fi
 
-              echo "Response from dinosaurs endpoint: $RESPONSE"
-              echo "Service is functional and responding as expected."
+              echo "Requesting ${BASE_URL}/api/rh-trex/v1/dinosaurs..."
+              curl -k -v -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs"
+              echo request completed
   
        
