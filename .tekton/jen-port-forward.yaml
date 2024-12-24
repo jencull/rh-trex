@@ -261,6 +261,9 @@ spec:
               chmod +x /tmp/ocm
               export PATH=$PATH:/tmp
 
+              echo "Installing jq for JSON parsing..."
+              dnf install -y jq
+
               echo "Logging into the service with OCM token..."
               ocm login --token=${OCM_TOKEN} --url=${BASE_URL}
 
