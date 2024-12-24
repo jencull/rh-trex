@@ -1,4 +1,5 @@
-apiVersion: tekton.dev/v1beta1 
+---
+apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
   name: integration-test-app
@@ -261,3 +262,4 @@ spec:
               echo "Requesting ${BASE_URL}/api/rh-trex/v1/dinosaurs..."
               curl -k -v -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo request completed
+  

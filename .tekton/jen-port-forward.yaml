@@ -204,6 +204,9 @@ spec:
     - name: run-test
       runAfter: [deploy-app]
       taskSpec:
+        results: 
+          - name: authenticated_url
+            description: "The authenticated URL for the Dinosaur API"
         sidecars:
         - name: port-forward
           image: registry.redhat.io/openshift4/ose-cli:latest
@@ -254,13 +257,16 @@ spec:
               BASE_URL="http://127.0.0.1:8000"
               echo "Base URL for testing: ${BASE_URL}"
 
-              if [ -z "${OCM_TOKEN}" ]; then
-                echo "ERROR: OCM_TOKEN is missing. Check your secret configuration."
-                exit 1
-              fi
+              echo "Logging into the service with OCM token..."
+              ocm login --token=${OCM_ACCESS_TOKEN} --url=${BASE_URL}
 
-              echo "Requesting ${BASE_URL}/api/rh-trex/v1/dinosaurs..."
-              curl -k -v -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs"
-              echo request completed
+              echo "Verifying authentication by accessing the Dinosaur API..."
+              AUTH_RESPONSE=$(ocm get /api/rh-trex/v1/dinosaurs)
+
+              echo "List of dinosaurs:"
+              echo "${AUTH_RESPONSE}" | jq '.items[]' || echo "No dinosaurs found or failed to parse the response."
+
+              AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
+              echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
   
        
