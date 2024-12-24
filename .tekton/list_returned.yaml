@@ -1,3 +1,4 @@
+---
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
@@ -12,6 +13,14 @@ spec:
       name: SNAPSHOT
       default: '{"components": [{"name":"test-app", "containerImage": "quay.io/example/repo:latest"}]}'
       type: string
+    - description: 'Horreum Test Name'
+      name: HR_TEST_NAME
+      default: ""
+      type: string      
+    - description: 'Horreum regression variable'
+      name: HR_REG_VAR
+      default: ""
+      type: string        
   tasks:
     - name: provision-env
       taskSpec:
@@ -59,11 +68,47 @@ spec:
               else
                 exit 1
               fi
+    - name: extract-secrets
+      taskSpec:
+        results:
+          - name: HORREUM_PASSWORD
+            type: string
+          - name: HORREUM_URI
+            type: string
+          - name: HORREUM_USER
+            type: string
+          - name: HORREUM_COFIG_SET
+            type: string                       
+        steps:
+          - name: extract-secrets
+            image: registry.redhat.io/openshift4/ose-cli:latest
+            script: |
+              #!/bin/bash
+              horreum_sec_set='true'
+              horreum_password=''
+              horreum_uri=''
+              horreum_user=''
+              oc get secret horreum
+              if [ $? -ne 0 ]; then
+                horreum_sec_set='false'
+              else
+                horreum_password=$(oc get secret horreum -o jsonpath='{.data.horreum_password}' | base64 --decode)
+                horreum_uri=$(oc get secret horreum -o jsonpath='{.data.horreum_uri}' | base64 --decode)
+                horreum_user=$(oc get secret horreum -o jsonpath='{.data.horreum_user}' | base64 --decode)
+              fi
+              echo -n "${horreum_password}" | tee $(results.HORREUM_PASSWORD.path)
+              echo -n "${horreum_uri}" | tee $(results.HORREUM_URI.path)
+              echo -n "${horreum_user}" | tee $(results.HORREUM_USER.path)                
+              echo -n "${horreum_sec_set}" | tee $(results.HORREUM_COFIG_SET.path)                   
     - name: deploy-app
       runAfter: [provision-env]
       params:
         - name: SNAPSHOT
           value: $(params.SNAPSHOT)
+        - name: HR_TEST_NAME
+          value: $(params.HR_TEST_NAME)          
+        - name: HR_REG_VAR
+          value: $(params.HR_REG_VAR)
       taskSpec:
         params:
           - name: SNAPSHOT
@@ -74,9 +119,19 @@ spec:
           - default: ""
             name: PORT
             description: Application endpoint Port
+          - name: HR_TEST_NAME
+            description: 'Horreum Test Name'            
+          - name: HR_REG_VAR
+            description: 'Horreum regression variable'            
         results:
           - name: APP_URL
             description: APP URL
+          - name: test_name
+            description: Test name
+          - name: reg_var
+            description: Regression variable             
+          - name: TEST_OUTPUT
+            description: Test output             
         steps:
           - name: placeholder-name
             image: registry.redhat.io/openshift4/ose-cli:latest
@@ -104,9 +159,6 @@ spec:
               dnf -y install jq git
               export KUBECONFIG=/tmp/cfg
 
-              COMPONENT_NAME=$(echo -n ${SNAPSHOT} | jq -r .components[0].name)
-
-              echo "Deploying component ${COMPONENT_NAME}..."
               # Get the route for the application endpoint
               COMPONENT_NAME=$(echo -n ${SNAPSHOT} | jq -r .components[0].name)
               # The --insecure-skip-tls-verify option is added for local testing
@@ -135,6 +187,20 @@ spec:
               oc get --kubeconfig /tmp/cfg events
               oc describe --kubeconfig /tmp/cfg pod -l app=trex
               oc logs --kubeconfig /tmp/cfg -l app=trex
+
+              if [ -z $(params.HR_TEST_NAME) ]
+              then
+                echo '$(params.SNAPSHOT)'|jq -r .components[].name |  tr -d '\n\t' | tee $(results.test_name.path)
+              else
+                echo -n  '$(params.HR_TEST_NAME)' | tee $(results.test_name.path)
+              fi            
+            
+              if [ -z $(params.HR_REG_VAR) ]
+              then
+                echo -n 'iteration_duration' | tee $(results.reg_var.path)
+              else
+                echo -n '$(params.HR_REG_VAR)' | tee $(results.reg_var.path)
+              fi             
     - name: run-test
       runAfter: [deploy-app]
       taskSpec:
@@ -168,6 +234,7 @@ spec:
             /tmp/ocm login --token=${OCM_TOKEN} --url=http://127.0.0.1:8000 --debug
 
             echo "Starting port-forward for service/trex on port 8000..."
+            # Run port-forward in the background and log its output
             oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000 &
             sleep 20
             if ! curl -s http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs; then
@@ -208,6 +275,3 @@ spec:
 
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
-
-  
-       
