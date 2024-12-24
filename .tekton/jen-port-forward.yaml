@@ -257,8 +257,12 @@ spec:
               BASE_URL="http://127.0.0.1:8000"
               echo "Base URL for testing: ${BASE_URL}"
 
+              wget -O /tmp/ocm https://github.com/openshift-online/ocm-cli/releases/download/v1.0.3/ocm-linux-amd64
+              chmod +x /tmp/ocm
+              export PATH=$PATH:/tmp
+
               echo "Logging into the service with OCM token..."
-              ocm login --token=${OCM_ACCESS_TOKEN} --url=${BASE_URL}
+              ocm login --token=${OCM_TOKEN} --url=${BASE_URL}
 
               echo "Verifying authentication by accessing the Dinosaur API..."
               AUTH_RESPONSE=$(ocm get /api/rh-trex/v1/dinosaurs)
