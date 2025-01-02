@@ -196,11 +196,10 @@ spec:
               dnf install -y jq
 
               echo "Logging into the service with OCM token..."
-              ocm login --token=${OCM_TOKEN} --url=${BASE_URL}
+              /tmp/ocm login --token=${OCM_TOKEN} --url=${BASE_URL}
 
               echo "Verifying authentication by accessing the Dinosaur API..."
-              curl -k -v -H "Authorization: Bearer $OCM_TOKEN" "${BASE_URL}/api/rh-trex/v1/dinosaurs"
-              AUTH_RESPONSE=$(ocm get /api/rh-trex/v1/dinosaurs)
+              AUTH_RESPONSE=$(/tmp/ocm get /api/rh-trex/v1/dinosaurs)
 
               echo "List of dinosaurs:"
               echo "${AUTH_RESPONSE}" | jq '.items[]' || echo "No dinosaurs found or failed to parse the response."
