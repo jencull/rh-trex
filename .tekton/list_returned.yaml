@@ -1,12 +1,10 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: integration-test-app
+  name: rapiddast-scan
 spec:
   description: >-
-    Expects a Snapshot of a simple application with endpoint containing the expected output to be deployed on an environment. 
-    A secret containing the kubeconfig for the environment needs to be mounted via the cluster-credentials workspace binding.
-    The route to the single component is expected to have the same name as the component (default appstudio behavior).
+    Implement the RapidDAST scanning task in rh-trex to service as a proof of concept for users.
   params:
     - description: 'Snapshot of the application'
       name: SNAPSHOT
@@ -198,10 +196,10 @@ spec:
               dnf install -y jq
 
               echo "Logging into the service with OCM token..."
-              ocm login --token=${OCM_TOKEN} --url=${BASE_URL}
+              /tmp/ocm login --token=${OCM_TOKEN} --url=${BASE_URL}
 
               echo "Verifying authentication by accessing the Dinosaur API..."
-              AUTH_RESPONSE=$(ocm get /api/rh-trex/v1/dinosaurs)
+              AUTH_RESPONSE=$(/tmp/ocm get /api/rh-trex/v1/dinosaurs)
 
               echo "List of dinosaurs:"
               echo "${AUTH_RESPONSE}" | jq '.items[]' || echo "No dinosaurs found or failed to parse the response."
