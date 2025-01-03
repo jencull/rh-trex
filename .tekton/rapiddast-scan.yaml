@@ -133,7 +133,7 @@ spec:
               oc get --kubeconfig /tmp/cfg events
               oc describe --kubeconfig /tmp/cfg pod -l app=trex
               oc logs --kubeconfig /tmp/cfg -l app=trex
-    - name: run-test
+    - name: setup-test
       runAfter: [deploy-app]
       taskSpec:
         results: 
@@ -206,6 +206,65 @@ spec:
 
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
+    - name: scan-with-rapidast
+      runAfter: [setup-test]
+      params:
+        - name: authenticated_url
+          value: "$(tasks.setup-test.results.authenticated_url)"
+      taskSpec:
+        params:
+          - name: authenticated_url
+            description: "The authenticated URL for the Dinosaur API"
+        steps:
+          - name: prepare-config-and-scan
+            image: registry.access.redhat.com/ubi8/ubi:latest
+            script: |
+              #!/usr/bin/env bash
+              set -ex
+
+              # Use AUTH_URL from parameter
+              AUTH_URL="${authenticated_url}"
+              echo "AUTH_URL for scanning: $AUTH_URL"
+
+              # Generate RapiDAST config file
+              CONFIG_PATH="/workspace/config.yaml"
+              cat <<EOF > $CONFIG_PATH
+              config:
+                configVersion: 5
+
+              application:
+                shortName: "test-app"
+                url: "${AUTH_URL}"
+
+              scanners:
+                zap:
+                  apiScan:
+                    apis:
+                      apiUrl: "${AUTH_URL}"
+              EOF
+
+              echo "Generated RapiDAST configuration file:"
+              cat $CONFIG_PATH
+
+              # Run RapiDAST container
+              RESULTS_DIR="/workspace/results"
+              mkdir -p $RESULTS_DIR
+              echo "Running RapiDAST scan..."
+
+              podman run \
+                --network=host \  # Use host network to access localhost:8000
+                -v $CONFIG_PATH:/opt/rapidast/config/config.yaml:Z \
+                -v $RESULTS_DIR:/opt/rapidast/results/:Z \
+                quay.io/redhatproductsecurity/rapidast:latest ./rapidast.py
+
+              echo "RapiDAST scan completed. Results available in $RESULTS_DIR:"
+              ls -l $RESULTS_DIR
+
+              # Display results
+              echo "Displaying scan results:"
+              cat $RESULTS_DIR/*.html || echo "No HTML results found."
+              cat $RESULTS_DIR/*.json || echo "No JSON results found."
+  
 
   
        
