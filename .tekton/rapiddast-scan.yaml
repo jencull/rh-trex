@@ -229,9 +229,9 @@ spec:
               EOF
 
               echo "Running RapiDAST scan with config at $CONFIG_PATH"
-              ./rapidast.py --config $CONFIG_PATH --results $RESULTS_DIR
+              python3 /opt/rapidast/rapidast.py --config $CONFIG_PATH --results $RESULTS_DIR
 
-              echo "RapiDAST scan completed. Results:"
+              echo "RapiDAST scan completed. Results are:"
               ls -l $RESULTS_DIR
     
 
