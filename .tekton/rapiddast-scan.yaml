@@ -10,9 +10,6 @@ spec:
       name: SNAPSHOT
       default: '{"components": [{"name":"test-app", "containerImage": "quay.io/example/repo:latest"}]}'
       type: string
-  workspaces:
-    - name: shared-workspace
-      description: Workspace to share configuration and results between tasks
   tasks:
     - name: provision-env
       taskSpec:
@@ -138,9 +135,6 @@ spec:
               oc logs --kubeconfig /tmp/cfg -l app=trex
     - name: setup-test
       runAfter: [deploy-app]
-      workspaces:
-        - name: shared-workspace
-          workspace: shared-workspace
       taskSpec:
         results: 
           - name: authenticated_url
@@ -218,8 +212,6 @@ spec:
         - name: shared-workspace
           workspace: shared-workspace
       taskSpec:
-        workspaces:
-          - name: shared-workspace
         steps:
           - name: run-scan
             image: quay.io/redhatproductsecurity/rapidast:latest
