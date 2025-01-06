@@ -221,6 +221,7 @@ spec:
             script: |
               #!/usr/bin/env bash
               set -ex
+              dnf install -y podman
 
               # Use AUTH_URL from parameter
               AUTH_URL="${authenticated_url}"
