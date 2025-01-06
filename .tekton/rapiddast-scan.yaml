@@ -173,7 +173,7 @@ spec:
               exit 1
             fi
         steps:
-          - name: get-url
+          - name: get-url-run-scan
             image: registry.redhat.io/openshift4/ose-cli:latest
             env:
             - name: OCM_TOKEN
@@ -206,41 +206,34 @@ spec:
 
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
-    - name: run-rapidast-scan
-      runAfter: [setup-test]
-      workspaces:
-        - name: shared-workspace
-          workspace: shared-workspace
-      taskSpec:
-        steps:
-          - name: run-scan
-            image: quay.io/redhatproductsecurity/rapidast:latest
-            script: |
-              #!/usr/bin/env bash
-              set -ex
 
-              # Define paths for the config file and results directory
-              CONFIG_PATH="/workspace/shared-workspace/config.yaml"
-              RESULTS_DIR="/workspace/shared-workspace/results"
-
-              # Ensure results directory exists
+              # RapiDAST Config File
+              CONFIG_PATH="/workspace/config.yaml"
+              RESULTS_DIR="/workspace/results"
               mkdir -p $RESULTS_DIR
 
+              echo "Creating RapiDAST configuration..."
+              cat <<EOF > $CONFIG_PATH
+              config:
+                configVersion: 5
 
-              # Run the RapiDAST scan
-              set +e
+              application:
+                shortName: "test-app"
+                url: "${AUTH_URL}"
+
+              scanners:
+                zap:
+                  apiScan:
+                    apis:
+                      apiUrl: "${AUTH_URL}"
+              EOF
+
+              echo "Running RapiDAST scan with config at $CONFIG_PATH"
               ./rapidast.py --config $CONFIG_PATH --results $RESULTS_DIR
-              SCAN_EXIT_CODE=$?
-              set -e
 
-              if [ $SCAN_EXIT_CODE -ne 0 ]; then
-                echo "RapiDAST scan failed with exit code $SCAN_EXIT_CODE"
-                exit $SCAN_EXIT_CODE
-              fi
-
-              # List results
-              echo "Scan completed. Listing results:"
+              echo "RapiDAST scan completed. Results:"
               ls -l $RESULTS_DIR
+    
 
   
        
