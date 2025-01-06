@@ -221,8 +221,7 @@ spec:
             script: |
               #!/usr/bin/env bash
               set -ex
-              dnf install -y sudo
-              dnf install -y podman
+              dnf install -y docker
 
               # Use AUTH_URL from parameter
               AUTH_URL="http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs"
@@ -253,7 +252,7 @@ spec:
               mkdir -p $RESULTS_DIR
               echo "Running RapiDAST scan..."
 
-              sudo podman run \
+              docker run \
                 --network=host \  # Use host network to access localhost:8000
                 -v $CONFIG_PATH:/opt/rapidast/config/config.yaml:Z \
                 -v $RESULTS_DIR:/opt/rapidast/results/:Z \
