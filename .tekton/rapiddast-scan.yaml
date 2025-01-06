@@ -206,8 +206,6 @@ spec:
 
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
-
-              
    
                # RapiDAST config file
               CONFIG_PATH="/workspace/config.yaml"
@@ -234,7 +232,7 @@ spec:
               mkdir -p $RESULTS_DIR
               echo "Running RapiDAST scan..."
 
-              podman run \
+              podman run --privileged \
                 --network=host \
                 -v $CONFIG_PATH:/opt/rapidast/config/config.yaml:Z \
                 -v $RESULTS_DIR:/opt/rapidast/results/:Z \
