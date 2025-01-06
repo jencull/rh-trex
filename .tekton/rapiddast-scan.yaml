@@ -192,8 +192,8 @@ spec:
               chmod +x /tmp/ocm
               export PATH=$PATH:/tmp
 
-              echo "Installing jq for JSON parsing..."
-              dnf install -y jq
+              echo "Installing podman and jq for JSON parsing..."
+              dnf install -y jq podman
 
               echo "Logging into the service with OCM token..."
               /tmp/ocm login --token=${OCM_TOKEN} --url=${BASE_URL}
@@ -206,6 +206,8 @@ spec:
 
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
+
+              
    
                # RapiDAST config file
               CONFIG_PATH="/workspace/config.yaml"
