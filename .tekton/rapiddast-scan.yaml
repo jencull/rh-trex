@@ -224,7 +224,7 @@ spec:
               dnf install -y podman
 
               # Use AUTH_URL from parameter
-              AUTH_URL="${authenticated_url}"
+              AUTH_URL="http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs"
               echo "AUTH_URL for scanning: $AUTH_URL"
 
               # Generate RapiDAST config file
