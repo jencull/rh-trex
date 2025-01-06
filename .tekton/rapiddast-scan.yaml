@@ -206,28 +206,8 @@ spec:
 
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
-    - name: scan-with-rapidast
-      runAfter: [setup-test]
-      params:
-        - name: authenticated_url
-          value: "$(tasks.setup-test.results.authenticated_url)"
-      taskSpec:
-        params:
-          - name: authenticated_url
-            description: "The authenticated URL for the Dinosaur API"
-        steps:
-          - name: prepare-config-and-scan
-            image: registry.access.redhat.com/ubi8/ubi:latest
-            script: |
-              #!/usr/bin/env bash
-              set -ex
-              dnf install -y docker
-
-              # Use AUTH_URL from parameter
-              AUTH_URL="http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs"
-              echo "AUTH_URL for scanning: $AUTH_URL"
-
-              # Generate RapiDAST config file
+   
+               # RapiDAST config file
               CONFIG_PATH="/workspace/config.yaml"
               cat <<EOF > $CONFIG_PATH
               config:
@@ -244,16 +224,16 @@ spec:
                       apiUrl: "${AUTH_URL}"
               EOF
 
-              echo "Generated RapiDAST configuration file:"
+              echo "Created RapiDAST configuration file:"
               cat $CONFIG_PATH
 
-              # Run RapiDAST container
+              # Run scan
               RESULTS_DIR="/workspace/results"
               mkdir -p $RESULTS_DIR
               echo "Running RapiDAST scan..."
 
-              docker run \
-                --network=host \  # Use host network to access localhost:8000
+              podman run \
+                --network=host \
                 -v $CONFIG_PATH:/opt/rapidast/config/config.yaml:Z \
                 -v $RESULTS_DIR:/opt/rapidast/results/:Z \
                 quay.io/redhatproductsecurity/rapidast:latest ./rapidast.py
