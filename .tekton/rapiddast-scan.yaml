@@ -228,9 +228,6 @@ spec:
         steps:
           - name: run-scan
             image: quay.io/redhatproductsecurity/rapidast:latest
-            securityContext:
-              capabilities:
-                add: ["SETFCAP"]
             script: |
               #!/usr/bin/env bash
               set -ex
@@ -242,11 +239,7 @@ spec:
               chmod o+w ${RESULTS_DIR}
 
               echo "Running RapiDAST scan with config at ${CONFIG_PATH}..."
-              podman run --network=host \
-                -v ${CONFIG_PATH}:/opt/rapidast/config/config.yaml:Z \
-                -v ${RESULTS_DIR}:/opt/rapidast/results/:Z \
-                quay.io/redhatproductsecurity/rapidast:latest \
-                ./rapidast.py --config /opt/rapidast/config/config.yaml --results /opt/rapidast/results/
+              ./rapidast.py --config ${CONFIG_PATH} --results ${RESULTS_DIR}
 
               echo "RapiDAST scan completed. Results:"
               ls -l ${RESULTS_DIR}
