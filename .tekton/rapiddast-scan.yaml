@@ -185,6 +185,13 @@ spec:
               #!/usr/bin/env bash
               set -ex
 
+              # Patch pipelines-scc
+              echo "Patching pipelines-scc to add SETFCAP capability..."
+              oc patch scc pipelines-scc --type merge -p '{"allowedCapabilities":["SETFCAP"]}' || {
+                echo "Failed to patch pipelines-scc. Ensure sufficient permissions are granted."
+                exit 1
+              }
+
               BASE_URL="http://127.0.0.1:8000"
               CONFIG_PATH="/workspace/config.yaml"
               RESULTS_DIR="/workspace/results"
