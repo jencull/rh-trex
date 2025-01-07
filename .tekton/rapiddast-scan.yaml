@@ -175,7 +175,7 @@ spec:
               exit 1
             fi
         steps:
-          - name: get-url-run-scan
+          - name: get-url
             image: registry.redhat.io/openshift4/ose-cli:latest
             env:
             - name: OCM_TOKEN
@@ -189,7 +189,6 @@ spec:
 
               BASE_URL="http://127.0.0.1:8000"
               CONFIG_PATH="/workspace/config.yaml"
-              RESULTS_DIR="/workspace/results"
 
               echo "Base URL for testing: ${BASE_URL}"
 
@@ -197,8 +196,7 @@ spec:
               chmod +x /tmp/ocm
               export PATH=$PATH:/tmp
 
-              echo "Installing required tools: podman, jq, and python3..."
-              dnf install -y jq podman python3
+              dnf install -y jq
 
               echo "Logging into the service with OCM token..."
               /tmp/ocm login --token=${OCM_TOKEN} --url=${BASE_URL}
@@ -238,8 +236,25 @@ spec:
               mkdir -p ${RESULTS_DIR}
               chmod o+w ${RESULTS_DIR}
 
+              echo "Creating RapiDAST configuration inline..."
+              cat <<EOF > ${CONFIG_PATH}
+              config:
+                configVersion: 5
+
+              application:
+                shortName: "test-app"
+                url: "$(params.authenticated_url)"
+
+              scanners:
+                zap:
+                  apiScan:
+                    apis:
+                      apiUrl: "$(params.authenticated_url)"
+                    resultsDir: "${RESULTS_DIR}"
+                EOF
+
               echo "Running RapiDAST scan with config at ${CONFIG_PATH}..."
-              ./rapidast.py --config ${CONFIG_PATH} --results ${RESULTS_DIR}
+              ./rapidast.py --config ${CONFIG_PATH}
 
               echo "RapiDAST scan completed. Results:"
               ls -l ${RESULTS_DIR}
