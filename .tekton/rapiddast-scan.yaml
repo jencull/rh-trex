@@ -184,16 +184,20 @@ spec:
             script: |
               #!/usr/bin/env bash
               set -ex
-              
+
+              # Define paths
               BASE_URL="http://127.0.0.1:8000"
+              CONFIG_PATH="/workspace/config.yaml"
+              RESULTS_DIR="/workspace/results"
+
               echo "Base URL for testing: ${BASE_URL}"
 
               wget -O /tmp/ocm https://github.com/openshift-online/ocm-cli/releases/download/v1.0.3/ocm-linux-amd64
               chmod +x /tmp/ocm
               export PATH=$PATH:/tmp
 
-              echo "Installing podman and jq for JSON parsing..."
-              dnf install -y jq podman
+              echo "Installing required tools: podman, jq, and python3..."
+              dnf install -y jq podman python3
 
               echo "Logging into the service with OCM token..."
               /tmp/ocm login --token=${OCM_TOKEN} --url=${BASE_URL}
@@ -207,12 +211,11 @@ spec:
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
 
-              # RapiDAST Config File
-              CONFIG_PATH="/workspace/config.yaml"
-              RESULTS_DIR="/workspace/results"
+              # RapiDAST config
+              echo "Creating RapiDAST configuration file..."
               mkdir -p $RESULTS_DIR
+              chmod o+w $RESULTS_DIR
 
-              echo "Creating RapiDAST configuration..."
               cat <<EOF > $CONFIG_PATH
               config:
                 configVersion: 5
@@ -228,11 +231,26 @@ spec:
                       apiUrl: "${AUTH_URL}"
               EOF
 
-              echo "Running RapiDAST scan with config at $CONFIG_PATH"
-              python3 /opt/rapidast/rapidast.py --config $CONFIG_PATH --results $RESULTS_DIR
+              echo "Configuration file created at $CONFIG_PATH"
+              cat $CONFIG_PATH
 
-              echo "RapiDAST scan completed. Results are:"
+              # Debug: List workspace contents
+              echo "Listing workspace contents:"
+              ls -l /workspace
+
+              # Run scan
+              echo "Running RapiDAST scan with config at $CONFIG_PATH"
+              podman run \
+                --network=host \
+                -v $CONFIG_PATH:/opt/rapidast/config/config.yaml:Z \
+                -v $RESULTS_DIR:/opt/rapidast/results/:Z \
+                quay.io/redhatproductsecurity/rapidast:latest \
+                ./rapidast.py --config /opt/rapidast/config/config.yaml --results /opt/rapidast/results/
+
+              echo "RapiDAST scan completed. Results:"
               ls -l $RESULTS_DIR
+              echo "Displaying all results files:"
+              cat $RESULTS_DIR/*
     
 
   
