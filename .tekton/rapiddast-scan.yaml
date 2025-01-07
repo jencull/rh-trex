@@ -139,6 +139,8 @@ spec:
         results: 
           - name: authenticated_url
             description: "The authenticated URL for the Dinosaur API"
+          - name: config_path
+            description: "Path to the RapiDAST configuration file"
         sidecars:
         - name: port-forward
           image: registry.redhat.io/openshift4/ose-cli:latest
@@ -216,49 +218,44 @@ spec:
 
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
+              echo -n "${CONFIG_PATH}" | tee $(results.config_path.path)
+    - name: run-rapidast-scan
+      runAfter: [setup-test]
+      params:
+        - name: authenticated_url
+          value: "$(tasks.setup-test.results.authenticated_url)"
+        - name: config_path
+          value: "$(tasks.setup-test.results.config_path)"
+      taskSpec:
+        params:
+          - name: authenticated_url
+            description: "The authenticated URL for the Dinosaur API"
+          - name: config_path
+            description: "Path to the RapiDAST configuration file"
+        steps:
+          - name: run-scan
+            image: quay.io/redhatproductsecurity/rapidast:latest
+            securityContext:
+              capabilities:
+                add: ["SETFCAP"]
+            script: |
+              #!/usr/bin/env bash
+              set -ex
 
-              # RapiDAST config
-              echo "Creating RapiDAST configuration file..."
-              mkdir -p $RESULTS_DIR
-              chmod o+w $RESULTS_DIR
+              CONFIG_PATH=$(params.config_path)
+              RESULTS_DIR="/tmp/results"
 
-              cat <<EOF > $CONFIG_PATH
-              config:
-                configVersion: 5
+              mkdir -p ${RESULTS_DIR}
+              chmod o+w ${RESULTS_DIR}
 
-              application:
-                shortName: "test-app"
-                url: "${AUTH_URL}"
-
-              scanners:
-                zap:
-                  apiScan:
-                    apis:
-                      apiUrl: "${AUTH_URL}"
-              EOF
-
-              echo "Configuration file created at $CONFIG_PATH"
-              cat $CONFIG_PATH
-
-              # Debug: List workspace contents
-              echo "Listing workspace contents:"
-              ls -l /workspace
-
-              # Run scan
-              echo "Running RapiDAST scan with config at $CONFIG_PATH"
-              podman run --privileged \
-              --security-opt label=disable \
-              --network=host \
-              -v $CONFIG_PATH:/opt/rapidast/config/config.yaml:Z \
-              -v $RESULTS_DIR:/opt/rapidast/results/:Z \
-              quay.io/redhatproductsecurity/rapidast:latest \
-              ./rapidast.py --config /opt/rapidast/config/config.yaml --results /opt/rapidast/results/
+              echo "Running RapiDAST scan with config at ${CONFIG_PATH}..."
+              podman run --network=host \
+                -v ${CONFIG_PATH}:/opt/rapidast/config/config.yaml:Z \
+                -v ${RESULTS_DIR}:/opt/rapidast/results/:Z \
+                quay.io/redhatproductsecurity/rapidast:latest \
+                ./rapidast.py --config /opt/rapidast/config/config.yaml --results /opt/rapidast/results/
 
               echo "RapiDAST scan completed. Results:"
-              ls -l $RESULTS_DIR
-              echo "Displaying all results files:"
-              cat $RESULTS_DIR/*
-    
-
-  
-       
+              ls -l ${RESULTS_DIR}
+              cat ${RESULTS_DIR}/*
+           
