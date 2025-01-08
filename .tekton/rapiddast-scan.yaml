@@ -169,7 +169,7 @@ spec:
 
             echo "Starting port-forward for service/trex on port 8000..."
             oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000 &
-            sleep 20
+            sleep 60
             if ! curl -s http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs; then
               echo "Port-forwarding failed or service unavailable."
               exit 1
@@ -210,8 +210,27 @@ spec:
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
               echo -n "${CONFIG_PATH}" | tee $(results.config_path.path)
+    - name: run-rapidast-scan
+      runAfter: [setup-test]
+      params:
+        - name: authenticated_url
+          value: "$(tasks.setup-test.results.authenticated_url)"
+        - name: config_path
+          value: "$(tasks.setup-test.results.config_path)"
+      taskSpec:
+        params:
+          - name: authenticated_url
+            description: "The authenticated URL for the Dinosaur API"
+          - name: config_path
+            description: "Path to the RapiDAST configuration file"
+        steps:
+          - name: run-scan
+            image: quay.io/redhatproductsecurity/rapidast:latest
+            script: |
+              #!/usr/bin/env bash
+              set -ex
 
-              #Run scan
+              CONFIG_PATH=$(params.config_path)
               RESULTS_DIR="/tmp/results"
 
               mkdir -p ${RESULTS_DIR}
@@ -221,14 +240,16 @@ spec:
               cat <<EOF > ${CONFIG_PATH}
               config:
                 configVersion: 5
+
               application:
                 shortName: "test-app"
-                url: "${AUTH_URL}"
+                url: "$(params.authenticated_url)"
+
               scanners:
                 zap:
                   apiScan:
                     apis:
-                      apiUrl: "${AUTH_URL}"
+                      apiUrl: "$(params.authenticated_url)"
                     resultsDir: "${RESULTS_DIR}"
               EOF
 
@@ -262,4 +283,4 @@ spec:
                 cat "${FINAL_RESULTS_DIR}/zap/zap-site-tree.json"
               else
                 echo "No ZAP Site Tree found."
-              fi
+              fi  
