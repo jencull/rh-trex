@@ -210,27 +210,8 @@ spec:
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
               echo -n "${CONFIG_PATH}" | tee $(results.config_path.path)
-    - name: run-rapidast-scan
-      runAfter: [setup-test]
-      params:
-        - name: authenticated_url
-          value: "$(tasks.setup-test.results.authenticated_url)"
-        - name: config_path
-          value: "$(tasks.setup-test.results.config_path)"
-      taskSpec:
-        params:
-          - name: authenticated_url
-            description: "The authenticated URL for the Dinosaur API"
-          - name: config_path
-            description: "Path to the RapiDAST configuration file"
-        steps:
-          - name: run-scan
-            image: quay.io/redhatproductsecurity/rapidast:latest
-            script: |
-              #!/usr/bin/env bash
-              set -ex
 
-              CONFIG_PATH=$(params.config_path)
+              #Run scan
               RESULTS_DIR="/tmp/results"
 
               mkdir -p ${RESULTS_DIR}
@@ -240,16 +221,14 @@ spec:
               cat <<EOF > ${CONFIG_PATH}
               config:
                 configVersion: 5
-
               application:
                 shortName: "test-app"
-                url: "$(params.authenticated_url)"
-
+                url: "${AUTH_URL}"
               scanners:
                 zap:
                   apiScan:
                     apis:
-                      apiUrl: "$(params.authenticated_url)"
+                      apiUrl: "${AUTH_URL}"
                     resultsDir: "${RESULTS_DIR}"
               EOF
 
@@ -283,5 +262,4 @@ spec:
                 cat "${FINAL_RESULTS_DIR}/zap/zap-site-tree.json"
               else
                 echo "No ZAP Site Tree found."
-              fi  
-           
+              fi
