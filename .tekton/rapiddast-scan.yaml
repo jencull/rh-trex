@@ -256,7 +256,32 @@ spec:
               echo "Running RapiDAST scan with config at ${CONFIG_PATH}..."
               ./rapidast.py --config ${CONFIG_PATH}
 
-              echo "RapiDAST scan completed. Results:"
-              ls -l ${RESULTS_DIR}
-              cat ${RESULTS_DIR}/*
+              echo "RapiDAST scan completed. Checking for generated reports..."
+
+              # Locate the results directory where files are stored
+              FINAL_RESULTS_DIR=$(find ./results -type d -name "DAST-*" -print -quit)
+              if [ -z "$FINAL_RESULTS_DIR" ]; then
+                echo "No results directory found. Check the scan configuration."
+                exit 1
+              fi
+
+              # List all files in the results directory
+              echo "Listing contents of results directory: ${FINAL_RESULTS_DIR}"
+              ls -l ${FINAL_RESULTS_DIR}
+
+              # Display the report files
+              if [ -f "${FINAL_RESULTS_DIR}/zap/zap-report.json" ]; then
+                echo "---- ZAP JSON Report ----"
+                cat "${FINAL_RESULTS_DIR}/zap/zap-report.json"
+              else
+                echo "No ZAP JSON Report found."
+              fi
+
+              # Display the site tree file
+              if [ -f "${FINAL_RESULTS_DIR}/zap/zap-site-tree.json" ]; then
+                echo "---- ZAP Site Tree ----"
+                cat "${FINAL_RESULTS_DIR}/zap/zap-site-tree.json"
+              else
+                echo "No ZAP Site Tree found."
+              fi  
            
