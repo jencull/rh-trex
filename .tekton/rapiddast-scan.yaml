@@ -163,17 +163,9 @@ spec:
             cat <<< "$KUBECONFIG_VALUE" > /tmp/cfg
             export KUBECONFIG=/tmp/cfg
 
-            wget -O /tmp/ocm https://github.com/openshift-online/ocm-cli/releases/download/v0.1.65/ocm-linux-amd64
-            chmod +x /tmp/ocm
-            /tmp/ocm login --token=${OCM_TOKEN} --url=http://127.0.0.1:8000 --debug
-
             echo "Starting port-forward for service/trex on port 8000..."
             oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000 &
-            sleep 60
-            if ! curl -s http://127.0.0.1:8000/api/rh-trex/v1/dinosaurs; then
-              echo "Port-forwarding failed or service unavailable."
-              exit 1
-            fi
+            sleep 20     
         steps:
           - name: get-url
             image: registry.redhat.io/openshift4/ose-cli:latest
@@ -186,6 +178,9 @@ spec:
             script: |
               #!/usr/bin/env bash
               set -ex
+
+              echo "[INFO] Waiting for port 8000 to be ready"
+              timeout 5m bash -c 'until echo > /dev/tcp/localhost/8000; do sleep 2s; done'
 
               BASE_URL="http://127.0.0.1:8000"
               CONFIG_PATH="/workspace/config.yaml"
