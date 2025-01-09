@@ -182,7 +182,7 @@ spec:
               echo "[INFO] Waiting for port 8000 to be ready"
               timeout 5m bash -c 'until echo > /dev/tcp/localhost/8000; do sleep 2s; done'
 
-              BASE_URL="http://127.0.0.1:8000"
+              BASE_URL="http://port-forward:8000"
               CONFIG_PATH="/workspace/config.yaml"
 
               echo "Base URL for testing: ${BASE_URL}"
