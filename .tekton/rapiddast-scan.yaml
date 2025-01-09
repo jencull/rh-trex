@@ -165,7 +165,7 @@ spec:
 
             echo "Starting port-forward for service/trex on port 8000..."
             oc port-forward --kubeconfig /tmp/cfg svc/trex 8000:8000 &
-            tail -f /dev/null     
+            sleep 20    
         steps:
           - name: get-url
             image: registry.redhat.io/openshift4/ose-cli:latest
@@ -205,27 +205,13 @@ spec:
               AUTH_URL="${BASE_URL}/api/rh-trex/v1/dinosaurs"
               echo -n "${AUTH_URL}" | tee $(results.authenticated_url.path)
               echo -n "${CONFIG_PATH}" | tee $(results.config_path.path)
-    - name: run-rapidast-scan
-      runAfter: [setup-test]
-      params:
-        - name: authenticated_url
-          value: "$(tasks.setup-test.results.authenticated_url)"
-        - name: config_path
-          value: "$(tasks.setup-test.results.config_path)"
-      taskSpec:
-        params:
-          - name: authenticated_url
-            description: "The authenticated URL for the Dinosaur API"
-          - name: config_path
-            description: "Path to the RapiDAST configuration file"
-        steps:
-          - name: run-scan
+          - name: run-rapiddast
             image: quay.io/redhatproductsecurity/rapidast:latest
             script: |
               #!/usr/bin/env bash
               set -ex
 
-              CONFIG_PATH=$(params.config_path)
+              CONFIG_PATH="/workspace/config.yaml"
               RESULTS_DIR="/tmp/results"
 
               mkdir -p ${RESULTS_DIR}
@@ -238,13 +224,13 @@ spec:
 
               application:
                 shortName: "test-app"
-                url: "$(params.authenticated_url)"
+                url: "$(results.authenticated_url.path)"
 
               scanners:
                 zap:
                   apiScan:
                     apis:
-                      apiUrl: "$(params.authenticated_url)"
+                      apiUrl: "$(results.authenticated_url.path)"
                     resultsDir: "${RESULTS_DIR}"
               EOF
 
@@ -253,18 +239,15 @@ spec:
 
               echo "RapiDAST scan completed. Checking for generated reports..."
 
-              # Locate the results directory where files are stored
               FINAL_RESULTS_DIR=$(find ./results -type d -name "DAST-*" -print -quit)
               if [ -z "$FINAL_RESULTS_DIR" ]; then
                 echo "No results directory found. Check the scan configuration."
                 exit 1
               fi
 
-              # List all files in the results directory
               echo "Listing contents of results directory: ${FINAL_RESULTS_DIR}"
               ls -l ${FINAL_RESULTS_DIR}
 
-              # Display the report files
               if [ -f "${FINAL_RESULTS_DIR}/zap/zap-report.json" ]; then
                 echo "---- ZAP JSON Report ----"
                 cat "${FINAL_RESULTS_DIR}/zap/zap-report.json"
@@ -278,4 +261,4 @@ spec:
                 cat "${FINAL_RESULTS_DIR}/zap/zap-site-tree.json"
               else
                 echo "No ZAP Site Tree found."
-              fi  
+              fi
